@@ -235,7 +235,7 @@ def create_planning_graph(
 def create_agent(
     llm: BaseChatModel,
     tools: list[BaseTool],
-    checkpoint_path: Optional[str] = None,
+    checkpointer=None,
     mode: str = "auto",
 ):
     """
@@ -244,18 +244,12 @@ def create_agent(
     Args:
         llm: Language model instance
         tools: List of available tools
-        checkpoint_path: Path to checkpoint database (enables persistence)
+        checkpointer: Optional checkpointer instance for persistence
         mode: Execution mode - "auto" (default, planning graph), "simple" (basic ReAct), "planning" (explicit planning)
 
     Returns:
         Compiled agent graph
     """
-    checkpointer = None
-    if checkpoint_path:
-        from koder.agent.checkpoints import get_checkpointer
-
-        checkpointer = get_checkpointer(checkpoint_path)
-
     # Choose graph based on mode
     if mode == "simple":
         # Legacy simple ReAct graph for backward compatibility

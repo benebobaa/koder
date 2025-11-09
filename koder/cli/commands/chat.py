@@ -92,49 +92,60 @@ def start(
         GitLogTool(workspace_path=workspace),
     ]
 
-    # Create agent with checkpointing and planning support
-    agent = create_agent(llm, tools, settings.storage.checkpoint_path, mode=mode)
-
     # Create prompt session
     session = create_session()
 
-    # Chat loop
+    # Chat loop with checkpointer context management
     try:
-        while True:
-            # Get user input
-            user_input = get_user_input(session, "You: ")
+        # Use checkpointer context manager for the entire session
+        with get_checkpointer(settings.storage.checkpoint_path) as checkpointer:
+            # Create agent with checkpointer
+            agent = create_agent(llm, tools, checkpointer, mode=mode)
 
-            if not user_input:
-                continue
+            while True:
+                # Get user input
+                user_input = get_user_input(session, "You: ")
 
-            if user_input.lower() in ["exit", "quit", "bye"]:
-                print_success("Goodbye!")
-                break
+                if not user_input:
+                    continue
 
-            # Create message
-            message = HumanMessage(content=user_input)
+                if user_input.lower() in ["exit", "quit", "bye"]:
+                    print_success("Goodbye!")
+                    break
 
-            # Run agent
-            try:
-                config = get_checkpoint_config(thread_id)
+                # Create message
+                message = HumanMessage(content=user_input)
 
-                # Stream agent execution
-                console.print()
-                for event in agent.stream(
-                    {"messages": [message]},
-                    config=config,
-                ):
-                    # Handle different event types
-                    for node, output in event.items():
-                        if "messages" in output:
-                            for msg in output["messages"]:
-                                format_message(msg)
+                # Run agent
+                try:
+                    config = get_checkpoint_config(thread_id)
 
-                console.print()
+                    # Create initial state with user message
+                    initial_state = create_initial_state(
+                        task=message.content,
+                        workspace_path=workspace,
+                        thread_id=thread_id,
+                        execution_mode=mode,
+                    )
+                    initial_state["messages"] = [message]
 
-            except Exception as e:
-                print_error(f"Error: {str(e)}")
-                logger.error("chat_error", error=str(e), exc_info=True)
+                    # Stream agent execution
+                    console.print()
+                    for event in agent.stream(
+                        initial_state,
+                        config=config,
+                    ):
+                        # Handle different event types
+                        for node, output in event.items():
+                            if "messages" in output:
+                                for msg in output["messages"]:
+                                    format_message(msg)
+
+                    console.print()
+
+                except Exception as e:
+                    print_error(f"Error: {str(e)}")
+                    logger.error("chat_error", error=str(e), exc_info=True)
 
     except KeyboardInterrupt:
         print_info("\nSession interrupted")

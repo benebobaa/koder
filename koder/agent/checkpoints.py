@@ -1,30 +1,30 @@
 """Checkpoint configuration for state persistence."""
 
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Optional
 
 from langgraph.checkpoint.sqlite import SqliteSaver
 
 
+@contextmanager
 def get_checkpointer(checkpoint_path: str):
     """
-    Get SQLite checkpointer instance.
+    Get SQLite checkpointer instance as a context manager.
 
     Args:
         checkpoint_path: Path to SQLite database file
 
-    Returns:
-        Configured SqliteSaver instance (context manager in v3.0+)
+    Yields:
+        Configured SqliteSaver instance
     """
     # Ensure directory exists
     Path(checkpoint_path).parent.mkdir(parents=True, exist_ok=True)
 
     # In langgraph-checkpoint-sqlite v3.0+, from_conn_string returns a context manager
-    # We need to enter it to get the actual checkpointer instance
-    conn_manager = SqliteSaver.from_conn_string(checkpoint_path)
-    # Enter the context manager to get the checkpointer
-    checkpointer = conn_manager.__enter__()
-    return checkpointer
+    # Use proper context management to keep database connection open
+    with SqliteSaver.from_conn_string(checkpoint_path) as checkpointer:
+        yield checkpointer
 
 
 def get_checkpoint_config(

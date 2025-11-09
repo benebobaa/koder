@@ -1,11 +1,14 @@
 """Task command for one-off executions."""
 
+import uuid
 from typing import Optional
 
 import typer
 from langchain_core.messages import HumanMessage
 
+from koder.agent.checkpoints import get_checkpoint_config
 from koder.agent.graph import create_agent
+from koder.agent.state import create_initial_state
 from koder.cli.ui.console import print_error, print_info, print_success
 from koder.cli.ui.formatters import format_message
 from koder.config.settings import get_settings
@@ -72,20 +75,52 @@ def run(
         GitDiffTool(workspace_path=workspace),
     ]
 
-    # Create agent with planning support
-    checkpoint_path = None if no_checkpoint else settings.storage.checkpoint_path
-    agent = create_agent(llm, tools, checkpoint_path, mode=mode)
-
     # Execute task
     try:
         message = HumanMessage(content=task)
+        thread_id = f"task-{uuid.uuid4().hex[:8]}"
 
-        # Run agent
-        for event in agent.stream({"messages": [message]}):
-            for node, output in event.items():
-                if "messages" in output:
-                    for msg in output["messages"]:
-                        format_message(msg)
+        if no_checkpoint:
+            # Create agent without checkpointing
+            agent = create_agent(llm, tools, None, mode=mode)
+
+            # Create initial state with task
+            initial_state = create_initial_state(
+                task=task,
+                workspace_path=workspace,
+                thread_id=thread_id,
+                execution_mode=mode,
+            )
+            initial_state["messages"] = [message]
+
+            # Run agent
+            for event in agent.stream(initial_state, config=get_checkpoint_config(thread_id)):
+                for node, output in event.items():
+                    if "messages" in output:
+                        for msg in output["messages"]:
+                            format_message(msg)
+        else:
+            # Use checkpointer context manager
+            from koder.agent.checkpoints import get_checkpointer
+            with get_checkpointer(settings.storage.checkpoint_path) as checkpointer:
+                # Create agent with checkpointer
+                agent = create_agent(llm, tools, checkpointer, mode=mode)
+
+                # Create initial state with task
+                initial_state = create_initial_state(
+                    task=task,
+                    workspace_path=workspace,
+                    thread_id=thread_id,
+                    execution_mode=mode,
+                )
+                initial_state["messages"] = [message]
+
+                # Run agent
+                for event in agent.stream(initial_state, config=get_checkpoint_config(thread_id)):
+                    for node, output in event.items():
+                        if "messages" in output:
+                            for msg in output["messages"]:
+                                format_message(msg)
 
         print_success("\nTask completed!")
 

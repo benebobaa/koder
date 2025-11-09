@@ -65,9 +65,29 @@ def confirm(prompt: str = "Continue?") -> bool:
     Returns:
         True if confirmed, False otherwise
     """
-    from prompt_toolkit.shortcuts import confirm as pt_confirm
+    import sys
+
+    # Check if we're in an interactive terminal
+    if not sys.stdin.isatty():
+        # Non-interactive mode: read from stdin if available, default to False
+        try:
+            # Try to read a single line from stdin
+            line = sys.stdin.readline().strip().lower()
+            return line in ['y', 'yes', 'true', '1']
+        except:
+            # If no input available, default to False (safer default)
+            return False
 
     try:
+        from prompt_toolkit.shortcuts import confirm as pt_confirm
         return pt_confirm(prompt)
     except (KeyboardInterrupt, EOFError):
         return False
+    except Exception:
+        # Fallback for any other prompt_toolkit errors
+        try:
+            # Simple text-based confirmation
+            response = input(f"{prompt} (y/n): ").strip().lower()
+            return response in ['y', 'yes', 'true', '1']
+        except:
+            return False

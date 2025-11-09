@@ -129,53 +129,107 @@ def plan_generation_node(
     response = llm.invoke(messages)
 
     try:
+        # Extract JSON from response (handle markdown code blocks)
+        content = response.content.strip()
+
+        # Remove markdown code blocks if present
+        if content.startswith("```json"):
+            content = content[7:]
+        if content.startswith("```"):
+            content = content[3:]
+        if content.endswith("```"):
+            content = content[:-3]
+
+        content = content.strip()
+
         # Parse plan
-        plan = json.loads(response.content)
+        plan = json.loads(content)
+
+        # Validate plan structure
+        if not isinstance(plan, dict):
+            raise ValueError("Plan is not a dictionary")
+
+        if "steps" not in plan or not isinstance(plan["steps"], list):
+            # Add default steps if missing
+            plan["steps"] = [
+                {
+                    "step_number": 1,
+                    "description": request,
+                    "tool": "",
+                    "type": "unknown",
+                    "file": "",
+                    "rationale": "Direct execution"
+                }
+            ]
 
         # Add metadata
         plan["created_at"] = datetime.now().isoformat()
 
         # Convert todos to proper format if needed
-        if "todos" in plan:
+        if "todos" not in plan or not isinstance(plan["todos"], list):
+            plan["todos"] = [
+                {
+                    "id": 1,
+                    "content": request,
+                    "status": "pending",
+                    "activeForm": f"Working on: {request}",
+                    "step_index": 0,
+                    "estimated_time": "Unknown"
+                }
+            ]
+        else:
             for i, todo in enumerate(plan["todos"]):
                 if "id" not in todo:
                     todo["id"] = i + 1
                 if "status" not in todo:
                     todo["status"] = "pending"
+                if "step_index" not in todo:
+                    todo["step_index"] = i
 
         return {
             "plan": plan,
             "plan_status": "pending",
             "plan_created_at": plan["created_at"],
-            "todos": plan.get("todos", []),
+            "todos": plan["todos"],
         }
 
-    except json.JSONDecodeError:
-        # Fallback: create simple plan
-        return {
-            "plan": {
-                "analysis": "Failed to generate structured plan",
-                "steps": [
-                    {"step_number": 1, "description": request, "type": "unknown"}
-                ],
-                "todos": [
-                    {
-                        "id": 1,
-                        "content": request,
-                        "status": "pending",
-                        "activeForm": f"Working on: {request}",
-                    }
-                ],
-            },
-            "plan_status": "pending",
+    except (json.JSONDecodeError, ValueError) as e:
+        # Fallback: create simple plan with proper structure
+        fallback_plan = {
+            "analysis": f"Failed to generate structured plan for: {request}. Will execute directly.",
+            "steps": [
+                {
+                    "step_number": 1,
+                    "description": request,
+                    "tool": "",
+                    "type": "unknown",
+                    "file": "",
+                    "rationale": "Direct execution due to planning failure"
+                }
+            ],
             "todos": [
                 {
                     "id": 1,
                     "content": request,
                     "status": "pending",
                     "activeForm": f"Working on: {request}",
+                    "step_index": 0,
+                    "estimated_time": "Unknown"
                 }
             ],
+            "files_to_create": [],
+            "files_to_modify": [],
+            "estimated_complexity": "medium",
+            "estimated_time": "Unknown",
+            "risks": ["Planning system failed, may need manual intervention"],
+            "created_at": datetime.now().isoformat()
+        }
+
+        return {
+            "plan": fallback_plan,
+            "plan_status": "pending",
+            "plan_created_at": fallback_plan["created_at"],
+            "todos": fallback_plan["todos"],
         }
 
 
@@ -236,13 +290,25 @@ def plan_execution_node(
     plan = state.get("plan")
     todos = state.get("todos", [])
 
-    if not plan or not plan.get("steps"):
-        return {"error": "No plan steps to execute"}
+    if not plan:
+        return {"error": "No plan available for execution"}
 
-    steps = plan["steps"]
+    steps = plan.get("steps")
+    if not steps or not isinstance(steps, list):
+        return {"error": "Invalid plan: no steps found or steps is not a list"}
+
     total_steps = len(steps)
+    if total_steps == 0:
+        return {"error": "Plan contains no steps to execute"}
+
     completed_steps = state.get("completed_steps", [])
     current_step_idx = state.get("current_step", 0)
+
+    # Validate current_step_idx
+    if current_step_idx is None or not isinstance(current_step_idx, int):
+        current_step_idx = 0
+    elif current_step_idx >= total_steps:
+        current_step_idx = 0  # Reset if out of bounds
 
     # Execute remaining steps
     for i in range(current_step_idx, total_steps):
@@ -261,18 +327,17 @@ def plan_execution_node(
 
         # Execute step
         try:
-            # Find and execute tool
-            if tool_name:
-                tool = registry.get_tool(tool_name)
-                if tool:
-                    # Execute tool
-                    # Note: This is simplified - real execution would use LLM to determine args
-                    result = f"Executed {tool_name} for step {step_number}"
-                else:
-                    result = f"Tool {tool_name} not found"
-            else:
-                # Use LLM to execute without specific tool
-                result = _execute_step_with_llm(state, llm, tools, step, i)
+            # Execute step using LLM with tools (this handles both specified tools and LLM-determined tools)
+            result = _execute_step_with_llm(state, llm, tools, step, i)
+
+            # Store result in tool outputs for reflection
+            step_result = {
+                "step_number": step_number,
+                "description": description,
+                "tool_name": tool_name,
+                "result": result,
+                "status": "completed"
+            }
 
             # Mark TODO as completed
             if i < len(todos):
@@ -280,17 +345,32 @@ def plan_execution_node(
 
             completed_steps.append(i)
 
+            # Update state with tool output
+            state.setdefault("tool_outputs", []).append(step_result)
+
         except Exception as e:
             # Mark TODO as failed
             if i < len(todos):
                 todos[i]["status"] = "failed"
 
+            error_result = f"Step {step_number} failed: {str(e)}"
+            step_result = {
+                "step_number": step_number,
+                "description": description,
+                "tool_name": tool_name,
+                "result": error_result,
+                "status": "failed"
+            }
+
+            state.setdefault("tool_outputs", []).append(step_result)
+
             return {
-                "error": f"Step {step_number} failed: {str(e)}",
+                "error": error_result,
                 "current_step": i,
                 "completed_steps": completed_steps,
                 "failed_steps": [i],
                 "todos": todos,
+                "tool_outputs": state.get("tool_outputs", []),
             }
 
     # All steps completed
@@ -302,6 +382,7 @@ def plan_execution_node(
         "completed_steps": completed_steps,
         "todos": todos,
         "should_continue": False,
+        "tool_outputs": state.get("tool_outputs", []),
     }
 
 
@@ -325,6 +406,9 @@ def _execute_step_with_llm(
     Returns:
         Execution result string
     """
+    from koder.cli.ui.console import console
+    from rich.panel import Panel
+
     plan = state.get("plan", {})
     previous_results = [
         state["tool_outputs"][i] if i < len(state.get("tool_outputs", [])) else {}
@@ -356,10 +440,28 @@ def _execute_step_with_llm(
 
             if tool_name in tool_lookup:
                 tool = tool_lookup[tool_name]
+
+                # Display tool being used
+                console.print(f"🔧 Using tool: {tool_name}")
+
+                # Execute tool
                 result = tool.invoke(tool_args)
                 results.append(result)
 
-        return " | ".join(str(r) for r in results)
+                # Display tool result
+                if hasattr(result, '__len__') and len(str(result)) > 300:
+                    # Truncate long results
+                    result_str = str(result)[:300] + "..."
+                else:
+                    result_str = str(result)
+
+                console.print(Panel(
+                    result_str,
+                    title=f"Tool Result: {tool_name}",
+                    border_style="blue"
+                ))
+
+        return " | ".join(str(r) for r in results) if results else response.content
 
     return response.content
 
@@ -373,31 +475,38 @@ def reflection_node(state: AgentState, llm: BaseChatModel) -> dict[str, Any]:
         llm: Language model
 
     Returns:
-        State updates with reflection
+        State updates with reflection and final response message
     """
+    from langchain_core.messages import AIMessage
+
     request = state["current_task"]
     plan = state.get("plan", {})
     results = state.get("tool_outputs", [])
     files_modified = state.get("gathered_files", [])
 
-    prompt = REFLECTION_PROMPT.format(
-        request=request,
-        plan=json.dumps(plan, indent=2),
-        results=json.dumps(results, indent=2),
-        files_modified=", ".join(files_modified) if files_modified else "None",
-    )
+    # Create a summary of what was accomplished
+    summary_parts = []
+    summary_parts.append(f"## Project Analysis Complete ✅")
+    summary_parts.append(f"**Original Request:** {request}")
 
-    messages = [SystemMessage(content=prompt)]
-    response = llm.invoke(messages)
+    if results:
+        summary_parts.append(f"\n### What I Found:")
+        for i, result in enumerate(results):
+            if result.get("status") == "completed":
+                summary_parts.append(f"**{result.get('description', 'Step ' + str(i+1))}** ✅")
+                # Extract key information from tool results
+                tool_result = result.get("result", "")
+                if "Contents of" in str(tool_result) or "Found" in str(tool_result):
+                    summary_parts.append(f"  {str(tool_result)[:200]}...")
 
-    try:
-        reflection = json.loads(response.content)
-        return {
-            "reflection": reflection,
-            "should_continue": False,
-        }
-    except json.JSONDecodeError:
-        return {
-            "reflection": {"summary": response.content},
-            "should_continue": False,
-        }
+    # Create final response
+    final_response = "\n\n".join(summary_parts)
+
+    # Create AIMessage for the chat interface
+    ai_message = AIMessage(content=final_response)
+
+    return {
+        "reflection": {"summary": final_response},
+        "should_continue": False,
+        "messages": [ai_message],  # Add the response message for display
+    }
