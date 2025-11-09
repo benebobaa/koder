@@ -76,6 +76,30 @@ class MCPSettings(BaseSettings):
     )
 
 
+class WebSearchSettings(BaseSettings):
+    """Web search configuration."""
+
+    backend: Literal["duckduckgo", "tavily", "brave"] = Field(
+        default="duckduckgo",
+        description="Web search backend to use"
+    )
+    tavily_api_key: str = Field(default="", alias="TAVILY_API_KEY")
+    brave_api_key: str = Field(default="", alias="BRAVE_API_KEY")
+    max_results: int = Field(
+        default=5,
+        description="Maximum number of search results to return"
+    )
+    safe_search: bool = Field(
+        default=True,
+        description="Enable safe search filtering"
+    )
+
+    model_config = SettingsConfigDict(
+        env_prefix="WEB_SEARCH_",
+        case_sensitive=False,
+    )
+
+
 class Settings(BaseSettings):
     """Main application settings."""
 
@@ -92,6 +116,7 @@ class Settings(BaseSettings):
     observability: ObservabilitySettings = Field(default_factory=ObservabilitySettings)
     storage: StorageSettings = Field(default_factory=StorageSettings)
     mcp: MCPSettings = Field(default_factory=MCPSettings)
+    web_search: WebSearchSettings = Field(default_factory=WebSearchSettings)
 
     # Agent settings
     max_iterations: int = 10

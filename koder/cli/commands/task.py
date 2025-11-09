@@ -20,6 +20,7 @@ from koder.tools.execution import BashTool, PythonTool
 from koder.tools.filesystem.read import FindFilesTool, ListDirectoryTool, ReadFileTool
 from koder.tools.filesystem.write import WriteFileTool
 from koder.tools.git.status import GitDiffTool, GitStatusTool
+from koder.tools.web import WebSearchTool
 
 app = typer.Typer()
 logger = get_logger(__name__)
@@ -77,6 +78,8 @@ def run(
         GitDiffTool(workspace_path=workspace),
         # Context retrieval tool for enhanced code understanding
         ContextRetrievalTool(workspace_path=workspace),
+        # Web search tool for current information
+        WebSearchTool(workspace_path=workspace),
         # Execution tools
         BashTool(workspace_path=workspace),
         PythonTool(workspace_path=workspace),

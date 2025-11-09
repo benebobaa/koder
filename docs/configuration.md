@@ -30,6 +30,21 @@ LLM_MAX_TOKENS=4096
 GOOGLE_API_KEY=xxxxx
 ```
 
+### Web Search Configuration
+
+```bash
+# Web Search Backend (duckduckgo, tavily, or brave)
+WEB_SEARCH_BACKEND=duckduckgo  # Default: free, no API key needed
+
+# Optional API keys for premium search backends
+TAVILY_API_KEY=tvly-xxxxx     # For Tavily (1000 free searches/month)
+BRAVE_API_KEY=BSA_xxxxx       # For Brave (2000 free searches/month)
+
+# Search Configuration
+WEB_SEARCH_MAX_RESULTS=5      # Default: 5
+WEB_SEARCH_SAFE_SEARCH=true   # Default: true
+```
+
 ### Observability Settings
 
 ```bash
@@ -210,6 +225,9 @@ koder --require-approval task run "modify files"
 - **code** - Code parsing and analysis (read-only, auto-approved)
 - **git** - Git operations (read/write, requires approval for destructive actions)
 - **filesystem** - File system operations (read-only auto-approved, write operations require approval)
+- **web** - Web search for current information (read-only, auto-approved)
+- **context** - Semantic code search using embeddings (read-only, auto-approved)
+- **execution** - Bash and Python execution (requires approval)
 - **mcp** - MCP server tools (configurable permissions based on server)
 
 ### Tool Permission Levels
@@ -219,6 +237,8 @@ koder --require-approval task run "modify files"
 - Code analysis and parsing
 - Git status and log viewing
 - Directory listing
+- Web search queries
+- Semantic code search
 
 **Requires Approval (Moderate Risk):**
 - File modification and creation
