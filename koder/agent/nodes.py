@@ -1,5 +1,7 @@
 """Agent node implementations."""
 
+import hashlib
+import time
 from typing import Any
 
 from langchain_core.language_models import BaseChatModel
@@ -7,6 +9,11 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, Tool
 from langchain_core.tools import BaseTool
 
 from koder.agent.state import AgentState
+
+
+# Simple context cache to minimize API calls
+_context_cache = {}
+_cache_ttl = 300  # 5 minutes
 
 
 SYSTEM_PROMPT = """You are Koder, an AI-powered code assistant.
@@ -28,6 +35,8 @@ def reasoning_node(
     """
     Reasoning node: LLM decides what to do next.
 
+    Enhanced with automatic context retrieval for better decision making.
+
     Args:
         state: Current agent state
         llm: Language model instance
@@ -38,12 +47,28 @@ def reasoning_node(
     """
     messages = state["messages"]
 
-    # Add system prompt if this is the first message
-    if not messages:
-        messages = [
-            SystemMessage(content=SYSTEM_PROMPT),
-            HumanMessage(content=state["current_task"]),
-        ]
+    # If this is the first reasoning call (iteration == 0), add context
+    if state["iteration"] == 0:
+        # Auto-gather context using embeddings if available
+        context = _auto_gather_context(state["current_task"], tools)
+
+        # Create enhanced messages with context
+        enhanced_messages = [SystemMessage(content=SYSTEM_PROMPT)]
+
+        # Add context if available
+        if context and context != "Context retrieval is not available.":
+            context_message = SystemMessage(content=f"""CONTEXT FROM CODEBASE:
+{context}
+
+Use this context to better understand the codebase and make more informed decisions.
+The context above provides relevant information about similar patterns, existing implementations,
+and code structure that should inform your approach to the task.""")
+            enhanced_messages.append(context_message)
+
+        # Add the original messages (usually contains the task)
+        enhanced_messages.extend(messages)
+
+        messages = enhanced_messages
 
     # Bind tools to LLM and invoke
     llm_with_tools = llm.bind_tools(tools)
@@ -160,3 +185,74 @@ def final_response_node(state: AgentState, llm: BaseChatModel) -> dict[str, Any]
         "messages": [response],
         "should_continue": False,
     }
+
+
+def _auto_gather_context(task: str, tools: list[BaseTool]) -> str:
+    """
+    Automatically gather relevant context using embeddings before reasoning.
+
+    This function makes the embedding investment worthwhile by providing
+    intelligent context to the agent before it makes decisions.
+
+    Includes caching to minimize API calls and improve performance.
+
+    Args:
+        task: The current task description
+        tools: List of available tools
+
+    Returns:
+        Relevant context from the codebase or empty string if unavailable
+    """
+    try:
+        # Create cache key from task
+        cache_key = hashlib.md5(task.encode()).hexdigest()
+        current_time = time.time()
+
+        # Check cache first
+        if cache_key in _context_cache:
+            cached_data = _context_cache[cache_key]
+            if current_time - cached_data['timestamp'] < _cache_ttl:
+                return cached_data['context']
+
+        # Find the context retrieval tool
+        context_tool = None
+        for tool in tools:
+            if hasattr(tool, 'name') and tool.name == "context_retrieval":
+                context_tool = tool
+                break
+
+        if not context_tool:
+            return ""
+
+        # Use semantic search to get relevant context
+        # Get more results for better context (5 instead of default 3)
+        context = context_tool._run(task, max_results=5)
+
+        # Filter out unhelpful responses
+        if (not context or
+            context == "Context retrieval is not available." or
+            context == "No relevant context found." or
+            "Error retrieving context:" in context or
+            len(context.strip()) < 50):
+            return ""
+
+        # Add context quality indicator
+        lines = context.split('\n')
+        file_count = len([line for line in lines if line.strip().startswith('[') and 'From ' in line])
+
+        if file_count > 0:
+            result = f"{context}\n\n*(Found {file_count} relevant files using semantic search)*"
+
+            # Cache the result
+            _context_cache[cache_key] = {
+                'context': result,
+                'timestamp': current_time
+            }
+
+            return result
+        else:
+            return ""
+
+    except Exception as e:
+        # Silently fail - context is enhancement, not requirement
+        return ""

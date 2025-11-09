@@ -96,6 +96,10 @@ class Settings(BaseSettings):
     # Agent settings
     max_iterations: int = 10
     timeout_seconds: int = 300
+    recursion_limit: int = Field(
+        default=100,
+        description="Maximum recursion depth for LangGraph execution"
+    )
 
 
 # Singleton settings instance

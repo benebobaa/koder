@@ -1,7 +1,7 @@
 """Vector store for semantic search."""
 
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, List
 
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
@@ -115,18 +115,51 @@ class VectorStore:
         """
         return self.vectorstore.similarity_search_with_score(query, k=k, filter=filter)
 
-    def delete(self, ids: list[str]) -> None:
+    def delete(self, ids: Optional[list[str]] = None, where: Optional[dict] = None) -> None:
         """
-        Delete documents by ID.
+        Delete documents by ID or metadata filter.
 
         Args:
-            ids: List of document IDs to delete
+            ids: Optional list of document IDs to delete
+            where: Optional metadata filter for deletion
         """
-        self.vectorstore.delete(ids=ids)
+        if where:
+            # Delete by metadata filter using Chroma's underlying collection
+            collection = self.vectorstore._collection
+            collection.delete(where=where)
+        elif ids:
+            # Delete by IDs
+            self.vectorstore.delete(ids=ids)
+        else:
+            raise ValueError("Either 'ids' or 'where' must be provided")
 
     def clear(self) -> None:
         """Clear all documents from the vector store."""
         self.vectorstore.delete_collection()
+
+    def count(self) -> int:
+        """
+        Count the number of documents in the vector store.
+
+        Returns:
+            Number of documents
+        """
+        try:
+            # Use the Chroma API to get the collection count
+            collection = self.vectorstore._collection
+            return collection.count()
+        except Exception:
+            # If getting count fails, return 0
+            return 0
+
+    def get_collection(self):
+        """
+        Get the underlying Chroma collection.
+
+        Returns:
+            Chroma collection object
+        """
+        return self.vectorstore._collection
 
     def as_retriever(self, **kwargs):
         """

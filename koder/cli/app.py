@@ -18,10 +18,11 @@ app = typer.Typer(
 )
 
 # Register command modules
-from koder.cli.commands import chat, task
+from koder.cli.commands import chat, task, embedding
 
 app.add_typer(chat.app, name="chat", help="Interactive chat mode")
 app.add_typer(task.app, name="task", help="Execute one-off tasks")
+app.add_typer(embedding.app, name="embedding", help="Manage semantic code embeddings")
 
 
 @app.callback()

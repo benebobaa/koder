@@ -31,6 +31,7 @@ def get_checkpoint_config(
     thread_id: str,
     checkpoint_ns: str = "",
     checkpoint_id: Optional[str] = None,
+    recursion_limit: int = 100,
 ) -> dict:
     """
     Generate checkpoint configuration for graph invocation.
@@ -39,6 +40,7 @@ def get_checkpoint_config(
         thread_id: Thread identifier
         checkpoint_ns: Checkpoint namespace (optional)
         checkpoint_id: Specific checkpoint ID to resume from (optional)
+        recursion_limit: Maximum recursion depth for graph execution (default: 100)
 
     Returns:
         Configuration dictionary for LangGraph
@@ -46,6 +48,7 @@ def get_checkpoint_config(
     config = {
         "configurable": {
             "thread_id": thread_id,
+            "recursion_limit": recursion_limit,
         }
     }
 

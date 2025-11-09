@@ -15,6 +15,8 @@ from koder.config.settings import get_settings
 from koder.llm.factory import LLMFactory
 from koder.observability.logging import get_logger
 from koder.tools.code.parser import ParsePythonTool
+from koder.tools.context import ContextRetrievalTool
+from koder.tools.execution import BashTool, PythonTool
 from koder.tools.filesystem.read import FindFilesTool, ListDirectoryTool, ReadFileTool
 from koder.tools.filesystem.write import WriteFileTool
 from koder.tools.git.status import GitDiffTool, GitStatusTool
@@ -73,6 +75,11 @@ def run(
         ParsePythonTool(workspace_path=workspace),
         GitStatusTool(workspace_path=workspace),
         GitDiffTool(workspace_path=workspace),
+        # Context retrieval tool for enhanced code understanding
+        ContextRetrievalTool(workspace_path=workspace),
+        # Execution tools
+        BashTool(workspace_path=workspace),
+        PythonTool(workspace_path=workspace),
     ]
 
     # Execute task
@@ -94,7 +101,7 @@ def run(
             initial_state["messages"] = [message]
 
             # Run agent
-            for event in agent.stream(initial_state, config=get_checkpoint_config(thread_id)):
+            for event in agent.stream(initial_state, config=get_checkpoint_config(thread_id, recursion_limit=settings.recursion_limit)):
                 for node, output in event.items():
                     if "messages" in output:
                         for msg in output["messages"]:
@@ -116,7 +123,7 @@ def run(
                 initial_state["messages"] = [message]
 
                 # Run agent
-                for event in agent.stream(initial_state, config=get_checkpoint_config(thread_id)):
+                for event in agent.stream(initial_state, config=get_checkpoint_config(thread_id, recursion_limit=settings.recursion_limit)):
                     for node, output in event.items():
                         if "messages" in output:
                             for msg in output["messages"]:

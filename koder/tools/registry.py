@@ -7,6 +7,7 @@ from langchain_core.tools import BaseTool
 # Tool categorization constants for planning mode
 READ_ONLY_CATEGORIES = {"code", "git.read"}
 WRITE_CATEGORIES = {"filesystem.write", "git.write"}
+EXECUTION_CATEGORIES = {"execution"}
 
 # Tools that require user approval before execution
 APPROVAL_REQUIRED_TOOLS = {
@@ -16,6 +17,8 @@ APPROVAL_REQUIRED_TOOLS = {
     "GitCommitTool",  # Future
     "GitPushTool",  # Future
     "RunCommandTool",  # Future
+    "BashTool",  # Execution tool
+    "PythonTool",  # Execution tool
 }
 
 # Tools that are read-only and safe to execute immediately
@@ -27,6 +30,7 @@ READ_ONLY_TOOLS = {
     "GitStatusTool",
     "GitDiffTool",
     "GitLogTool",
+    "ContextRetrievalTool",
 }
 
 

@@ -17,6 +17,8 @@ from koder.llm.factory import LLMFactory
 from koder.observability.logging import get_logger
 from koder.observability.tracing import configure_tracing
 from koder.tools.code.parser import ParsePythonTool
+from koder.tools.context import ContextRetrievalTool
+from koder.tools.execution import BashTool, PythonTool
 from koder.tools.filesystem.read import FindFilesTool, ListDirectoryTool, ReadFileTool
 from koder.tools.filesystem.write import AppendToFileTool, WriteFileTool
 from koder.tools.git.status import GitDiffTool, GitLogTool, GitStatusTool
@@ -90,6 +92,11 @@ def start(
         GitStatusTool(workspace_path=workspace),
         GitDiffTool(workspace_path=workspace),
         GitLogTool(workspace_path=workspace),
+        # Context retrieval tool for enhanced code understanding
+        ContextRetrievalTool(workspace_path=workspace),
+        # Execution tools
+        BashTool(workspace_path=workspace),
+        PythonTool(workspace_path=workspace),
     ]
 
     # Create prompt session
@@ -118,7 +125,7 @@ def start(
 
                 # Run agent
                 try:
-                    config = get_checkpoint_config(thread_id)
+                    config = get_checkpoint_config(thread_id, recursion_limit=settings.recursion_limit)
 
                     # Create initial state with user message
                     initial_state = create_initial_state(
