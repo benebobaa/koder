@@ -47,3 +47,16 @@ htmlcov/
 
 # uv
 .uv/
+
+# Runtime data
+data/
+*.db
+*.db-journal
+
+# History files
+.koder_history
+
+# Cache
+*.pyc
+.ruff_cache/
+.mypy_cache/
