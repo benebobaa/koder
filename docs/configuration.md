@@ -8,15 +8,17 @@ Koder uses environment variables for configuration. Copy `.env.example` to `.env
 
 ```bash
 # Choose your provider
-LLM_PROVIDER=anthropic  # or openai
+LLM_PROVIDER=anthropic  # or openai, deepseek
 
 # API Keys
 ANTHROPIC_API_KEY=sk-ant-xxxxx
 OPENAI_API_KEY=sk-xxxxx
+DEEPSEEK_API_KEY=sk-xxxxx
 
 # Model Configuration
 ANTHROPIC_MODEL=claude-sonnet-4-5-20250929
 OPENAI_MODEL=gpt-4-turbo-preview
+DEEPSEEK_MODEL=deepseek-chat
 LLM_TEMPERATURE=0.7
 LLM_MAX_TOKENS=4096
 ```
@@ -38,6 +40,25 @@ LANGSMITH_PROJECT=koder
 
 # Logging
 LOG_LEVEL=INFO  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+```
+
+### MCP (Model Context Protocol) Settings
+
+```bash
+# MCP Server Configuration
+MCP_SERVER_URL=http://localhost:8080
+MCP_API_KEY=your-mcp-api-key
+MCP_TIMEOUT=30
+```
+
+### Planning System Settings
+
+```bash
+# Planning Configuration
+ENABLE_PLANNING=true
+PLANNING_AUTO_APPROVE=false
+MAX_PLAN_STEPS=20
+COMPLEXITY_THRESHOLD=0.7
 ```
 
 ### Storage Paths
@@ -69,6 +90,9 @@ koder chat --provider anthropic
 
 # Use OpenAI GPT
 koder chat --provider openai
+
+# Use DeepSeek
+koder chat --provider deepseek
 ```
 
 ### Setting Workspace
@@ -103,6 +127,21 @@ For stateless execution:
 koder task run "analyze main.py" --no-checkpoint
 ```
 
+### Planning Control
+
+Control planning behavior:
+
+```bash
+# Force planning mode
+koder task run "complex refactoring" --plan
+
+# Disable planning (force simple mode)
+koder task run "quick question" --no-plan
+
+# Auto-approve plans (non-interactive)
+koder task run "automated task" --auto-approve
+```
+
 ### Verbose Logging
 
 Enable debug logging:
@@ -117,6 +156,18 @@ Suppress non-error output:
 
 ```bash
 koder --quiet task run "fix bugs"
+```
+
+### Tool Approval Settings
+
+Control tool approval behavior:
+
+```bash
+# Auto-approve safe tools
+koder --auto-approve-safe chat start
+
+# Require approval for all tools
+koder --require-approval task run "modify files"
 ```
 
 ## Model Configuration
@@ -134,28 +185,54 @@ koder --quiet task run "fix bugs"
 - `gpt-4` - Standard GPT-4
 - `gpt-3.5-turbo` - Fast and cost-effective
 
+**DeepSeek:**
+- `deepseek-chat` - General purpose chat model
+- `deepseek-reasoner` - Advanced reasoning model
+
 ### Model Capabilities
 
-| Model | Context Window | Max Output Tokens |
-|-------|---------------|-------------------|
-| Claude Opus | 200K | 16K |
-| Claude Sonnet | 200K | 16K |
-| Claude Haiku | 200K | 8K |
-| GPT-4 Turbo | 128K | 4K |
-| GPT-4o | 128K | 4K |
-| GPT-4 | 8K | 4K |
-| GPT-3.5 Turbo | 16K | 4K |
+| Model | Context Window | Max Output Tokens | Best For |
+|-------|---------------|-------------------|-----------|
+| Claude Opus | 200K | 16K | Complex reasoning, coding |
+| Claude Sonnet | 200K | 16K | Balanced performance |
+| Claude Haiku | 200K | 8K | Fast responses, simple tasks |
+| GPT-4 Turbo | 128K | 4K | General purpose |
+| GPT-4o | 128K | 4K | Optimized performance |
+| GPT-4 | 8K | 4K | Standard tasks |
+| GPT-3.5 Turbo | 16K | 4K | Cost-effective operations |
+| DeepSeek Chat | 128K | 8K | Conversational AI |
+| DeepSeek Reasoner | 128K | 8K | Complex reasoning |
 
 ## Tool Configuration
 
 ### Available Tool Categories
 
-- **code** - Code parsing and analysis
-- **git** - Git operations
-- **filesystem** - File system operations
-- **mcp** - MCP server tools
+- **code** - Code parsing and analysis (read-only, auto-approved)
+- **git** - Git operations (read/write, requires approval for destructive actions)
+- **filesystem** - File system operations (read-only auto-approved, write operations require approval)
+- **mcp** - MCP server tools (configurable permissions based on server)
 
-Tools are automatically loaded based on the task context.
+### Tool Permission Levels
+
+**Auto-Approved (Safe):**
+- File reading operations
+- Code analysis and parsing
+- Git status and log viewing
+- Directory listing
+
+**Requires Approval (Moderate Risk):**
+- File modification and creation
+- Git operations (commit, push, pull)
+- Directory creation
+- Search and replace operations
+
+**Requires Explicit Confirmation (High Risk):**
+- File deletion
+- Git destructive operations (reset, clean)
+- Directory deletion
+- System modification operations
+
+Tools are automatically loaded based on the task context and filtered by permission level.
 
 ## Observability
 
@@ -210,6 +287,27 @@ Application cache for performance:
 - **Purpose:** Temporary data storage
 - **Cleanup:** Safe to delete anytime
 
+## MCP Configuration
+
+### Setting Up MCP Servers
+
+Koder supports Model Context Protocol (MCP) for extended tool integration:
+
+```bash
+# Configure MCP server in .env
+MCP_SERVER_URL=https://your-mcp-server.com
+MCP_API_KEY=your-mcp-api-key
+MCP_TIMEOUT=30
+MCP_ENABLED=true
+```
+
+### MCP Tool Integration
+
+- MCP tools are automatically discovered and registered
+- Tools inherit permission levels from server configuration
+- Real-time tool availability updates
+- Support for custom tool schemas and parameters
+
 ## Security
 
 ### API Keys
@@ -228,8 +326,16 @@ Write operations are restricted to the workspace directory:
 tool.validate_write_path("/etc/passwd")
 ```
 
+### Tool Approval Security
+
+- Interactive approval for destructive operations
+- Clear risk descriptions for each tool
+- Approval history tracking for accountability
+- Emergency stop capability for long-running operations
+
 ### Safe Defaults
 
 - Read-only tools by default
 - Explicit write permissions required
 - Sandboxed execution environment
+- Automatic timeout protection for long operations
