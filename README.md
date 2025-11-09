@@ -11,7 +11,7 @@ Koder is a CLI-based AI code assistant powered by LangGraph, inspired by Anthrop
 ## Features
 
 - 🤖 **Agentic AI Assistant** - ReAct pattern with reasoning and action loops
-- 🔄 **Multi-Provider Support** - Anthropic Claude and OpenAI GPT with runtime switching
+- 🔄 **Multi-Provider Support** - Anthropic Claude, OpenAI GPT, and DeepSeek with runtime switching
 - 💬 **Interactive Chat Mode** - Conversational interface with history
 - ⚡ **One-Off Tasks** - Execute single tasks without interaction
 - 🧰 **Extensible Tools** - Code parsing, git operations, file system access
@@ -26,7 +26,7 @@ Koder is a CLI-based AI code assistant powered by LangGraph, inspired by Anthrop
 
 - Python 3.11 or higher
 - [uv](https://docs.astral.sh/uv/) package manager
-- API key for Anthropic Claude or OpenAI GPT
+- API key for Anthropic Claude, OpenAI GPT, or DeepSeek
 - Google API key for embeddings
 
 ### Installation
@@ -186,6 +186,9 @@ uv run koder chat start --provider anthropic
 
 # Use OpenAI GPT
 uv run koder chat start --provider openai
+
+# Use DeepSeek
+uv run koder chat start --provider deepseek
 ```
 
 ## Architecture
@@ -206,7 +209,7 @@ uv run koder chat start --provider openai
                    │
 ┌──────────────────▼──────────────────────────┐
 │        LLM Layer (Multi-Provider)           │
-│   Anthropic Claude  |  OpenAI GPT           │
+│  Anthropic Claude | OpenAI GPT | DeepSeek   │
 └──────────────────┬──────────────────────────┘
                    │
 ┌──────────────────▼──────────────────────────┐
@@ -313,9 +316,10 @@ class MyCustomTool(KoderTool):
 
 See `.env.example` for all configuration options:
 
-- **LLM_PROVIDER** - Provider to use (anthropic/openai)
+- **LLM_PROVIDER** - Provider to use (anthropic/openai/deepseek)
 - **ANTHROPIC_API_KEY** - Anthropic API key
 - **OPENAI_API_KEY** - OpenAI API key
+- **DEEPSEEK_API_KEY** - DeepSeek API key
 - **GOOGLE_API_KEY** - Google API key for embeddings
 - **LANGSMITH_TRACING** - Enable LangSmith tracing
 - **LOG_LEVEL** - Logging level (DEBUG/INFO/WARNING/ERROR)

@@ -5,6 +5,7 @@ from typing import Optional
 from langchain_anthropic import ChatAnthropic
 from langchain_core.language_models import BaseChatModel
 from langchain_core.runnables import ConfigurableField
+from langchain_deepseek import ChatDeepSeek
 from langchain_openai import ChatOpenAI
 
 from koder.config.settings import LLMSettings
@@ -44,9 +45,19 @@ class LLMFactory:
             api_key=settings.openai_api_key,
         )
 
+        # Create DeepSeek LLM
+        deepseek_llm = ChatDeepSeek(
+            model=settings.deepseek_model,
+            temperature=settings.temperature,
+            max_tokens=settings.max_tokens,
+            api_key=settings.deepseek_api_key,
+        )
+
         # Select default based on configured provider
         if settings.provider == "anthropic":
             base_llm = anthropic_llm
+        elif settings.provider == "deepseek":
+            base_llm = deepseek_llm
         else:
             base_llm = openai_llm
 
@@ -57,6 +68,7 @@ class LLMFactory:
                 default_key=settings.provider,
                 anthropic=anthropic_llm,
                 openai=openai_llm,
+                deepseek=deepseek_llm,
             )
             return llm
 
@@ -92,13 +104,28 @@ class LLMFactory:
             api_key=api_key,
         )
 
+    @staticmethod
+    def create_deepseek_llm(
+        model: str = "deepseek-chat",
+        temperature: float = 0.7,
+        max_tokens: int = 4096,
+        api_key: Optional[str] = None,
+    ) -> ChatDeepSeek:
+        """Create DeepSeek LLM directly."""
+        return ChatDeepSeek(
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            api_key=api_key,
+        )
+
 
 def get_llm_config(provider: str, thread_id: Optional[str] = None) -> dict:
     """
     Generate LLM runtime configuration.
 
     Args:
-        provider: Provider name ('anthropic' or 'openai')
+        provider: Provider name ('anthropic', 'openai', or 'deepseek')
         thread_id: Optional thread ID for checkpointing
 
     Returns:

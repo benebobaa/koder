@@ -58,7 +58,9 @@ class ReadFileTool(ReadOnlyTool):
             return content
 
         except UnicodeDecodeError:
-            return f"Error: File is not a text file or has invalid encoding: {file_path}"
+            return (
+                f"Error: File is not a text file or has invalid encoding: {file_path}"
+            )
         except Exception as e:
             return self._handle_error(e)
 

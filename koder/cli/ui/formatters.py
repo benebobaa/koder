@@ -163,12 +163,14 @@ def format_plan(plan: dict[str, Any]) -> None:
 
     # Display in panel
     console.print()
-    console.print(Panel(
-        Markdown(plan_text),
-        title="📋 Execution Plan",
-        border_style="blue",
-        padding=(1, 2)
-    ))
+    console.print(
+        Panel(
+            Markdown(plan_text),
+            title="📋 Execution Plan",
+            border_style="blue",
+            padding=(1, 2),
+        )
+    )
     console.print()
 
 
@@ -260,12 +262,14 @@ def format_approval_prompt(plan: dict[str, Any], task: str) -> None:
         f"[bold cyan]Approve this plan?[/bold cyan]"
     )
 
-    console.print(Panel(
-        prompt_text,
-        title="Approval Required",
-        border_style="yellow",
-        padding=(1, 2)
-    ))
+    console.print(
+        Panel(
+            prompt_text,
+            title="Approval Required",
+            border_style="yellow",
+            padding=(1, 2),
+        )
+    )
 
 
 def format_complexity_analysis(complexity: str, reasoning: str) -> None:

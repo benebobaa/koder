@@ -152,7 +152,9 @@ def list_threads():
     settings = get_settings()
 
     # Get thread manager
-    thread_mgr = ThreadManager(settings.storage.checkpoint_path.replace(".db", "_threads.db"))
+    thread_mgr = ThreadManager(
+        settings.storage.checkpoint_path.replace(".db", "_threads.db")
+    )
 
     threads = thread_mgr.list_threads()
 

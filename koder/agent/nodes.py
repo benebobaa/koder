@@ -22,7 +22,9 @@ Use the available tools to complete tasks. Think step-by-step about what needs t
 """
 
 
-def reasoning_node(state: AgentState, llm: BaseChatModel, tools: list[BaseTool]) -> dict[str, Any]:
+def reasoning_node(
+    state: AgentState, llm: BaseChatModel, tools: list[BaseTool]
+) -> dict[str, Any]:
     """
     Reasoning node: LLM decides what to do next.
 
@@ -98,11 +100,13 @@ def action_node(state: AgentState, tools: list[BaseTool]) -> dict[str, Any]:
         tool_messages.append(tool_message)
 
         # Store tool output
-        tool_outputs.append({
-            "tool": tool_name,
-            "args": tool_args,
-            "result": result,
-        })
+        tool_outputs.append(
+            {
+                "tool": tool_name,
+                "args": tool_args,
+                "result": result,
+            }
+        )
 
     return {
         "messages": tool_messages,

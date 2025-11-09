@@ -26,7 +26,9 @@ from koder.cli.ui.prompts import confirm
 from koder.tools.registry import registry
 
 
-def complexity_analysis_node(state: AgentState, llm: BaseChatModel, tools: list[BaseTool]) -> dict[str, Any]:
+def complexity_analysis_node(
+    state: AgentState, llm: BaseChatModel, tools: list[BaseTool]
+) -> dict[str, Any]:
     """
     Analyze task complexity to determine execution mode.
 
@@ -49,7 +51,7 @@ def complexity_analysis_node(state: AgentState, llm: BaseChatModel, tools: list[
         complexity = "simple" if state["execution_mode"] == "quick" else "complex"
         return {
             "task_complexity": complexity,
-            "complexity_reasoning": f"Explicit mode: {state['execution_mode']}"
+            "complexity_reasoning": f"Explicit mode: {state['execution_mode']}",
         }
 
     # Build tool list
@@ -57,8 +59,7 @@ def complexity_analysis_node(state: AgentState, llm: BaseChatModel, tools: list[
 
     # Create analysis prompt
     prompt = COMPLEXITY_ANALYSIS_PROMPT.format(
-        request=request,
-        tools=", ".join(tool_names)
+        request=request, tools=", ".join(tool_names)
     )
 
     # Use fast LLM for quick analysis
@@ -93,7 +94,9 @@ def complexity_analysis_node(state: AgentState, llm: BaseChatModel, tools: list[
         }
 
 
-def plan_generation_node(state: AgentState, llm: BaseChatModel, tools: list[BaseTool]) -> dict[str, Any]:
+def plan_generation_node(
+    state: AgentState, llm: BaseChatModel, tools: list[BaseTool]
+) -> dict[str, Any]:
     """
     Generate structured execution plan for complex tasks.
 
@@ -119,9 +122,7 @@ def plan_generation_node(state: AgentState, llm: BaseChatModel, tools: list[Base
 
     # Create planning prompt
     prompt = PLANNING_PROMPT.format(
-        request=request,
-        context=context,
-        tools="\n".join(tool_descriptions)
+        request=request, context=context, tools="\n".join(tool_descriptions)
     )
 
     messages = [SystemMessage(content=prompt)]
@@ -154,11 +155,27 @@ def plan_generation_node(state: AgentState, llm: BaseChatModel, tools: list[Base
         return {
             "plan": {
                 "analysis": "Failed to generate structured plan",
-                "steps": [{"step_number": 1, "description": request, "type": "unknown"}],
-                "todos": [{"id": 1, "content": request, "status": "pending", "activeForm": f"Working on: {request}"}],
+                "steps": [
+                    {"step_number": 1, "description": request, "type": "unknown"}
+                ],
+                "todos": [
+                    {
+                        "id": 1,
+                        "content": request,
+                        "status": "pending",
+                        "activeForm": f"Working on: {request}",
+                    }
+                ],
             },
             "plan_status": "pending",
-            "todos": [{"id": 1, "content": request, "status": "pending", "activeForm": f"Working on: {request}"}],
+            "todos": [
+                {
+                    "id": 1,
+                    "content": request,
+                    "status": "pending",
+                    "activeForm": f"Working on: {request}",
+                }
+            ],
         }
 
 
@@ -203,9 +220,7 @@ def plan_approval_node(state: AgentState) -> dict[str, Any]:
 
 
 def plan_execution_node(
-    state: AgentState,
-    llm: BaseChatModel,
-    tools: list[BaseTool]
+    state: AgentState, llm: BaseChatModel, tools: list[BaseTool]
 ) -> dict[str, Any]:
     """
     Execute plan steps sequentially with progress tracking.
@@ -295,7 +310,7 @@ def _execute_step_with_llm(
     llm: BaseChatModel,
     tools: list[BaseTool],
     step: dict,
-    step_index: int
+    step_index: int,
 ) -> str:
     """
     Execute a plan step using LLM with tools.
@@ -312,8 +327,7 @@ def _execute_step_with_llm(
     """
     plan = state.get("plan", {})
     previous_results = [
-        state["tool_outputs"][i] if i < len(state.get("tool_outputs", []))
-        else {}
+        state["tool_outputs"][i] if i < len(state.get("tool_outputs", [])) else {}
         for i in range(step_index)
     ]
 
@@ -322,7 +336,7 @@ def _execute_step_with_llm(
         total_steps=len(plan.get("steps", [])),
         plan_context=json.dumps(plan, indent=2),
         current_step=json.dumps(step, indent=2),
-        previous_results=json.dumps(previous_results, indent=2)
+        previous_results=json.dumps(previous_results, indent=2),
     )
 
     messages = [SystemMessage(content=prompt)]
@@ -370,7 +384,7 @@ def reflection_node(state: AgentState, llm: BaseChatModel) -> dict[str, Any]:
         request=request,
         plan=json.dumps(plan, indent=2),
         results=json.dumps(results, indent=2),
-        files_modified=", ".join(files_modified) if files_modified else "None"
+        files_modified=", ".join(files_modified) if files_modified else "None",
     )
 
     messages = [SystemMessage(content=prompt)]

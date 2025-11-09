@@ -17,6 +17,7 @@ def test_settings():
         llm__provider="anthropic",
         llm__anthropic_api_key="test-key",
         llm__openai_api_key="test-key",
+        llm__deepseek_api_key="test-key",
         storage__checkpoint_path=":memory:",
         storage__vector_store_path=":memory:",
         storage__cache_path=":memory:",
@@ -28,12 +29,8 @@ def test_settings():
 def mock_llm():
     """Mock LLM for testing."""
     llm = AsyncMock()
-    llm.invoke = MagicMock(
-        return_value=AIMessage(content="Test response from LLM")
-    )
-    llm.ainvoke = AsyncMock(
-        return_value=AIMessage(content="Test response from LLM")
-    )
+    llm.invoke = MagicMock(return_value=AIMessage(content="Test response from LLM"))
+    llm.ainvoke = AsyncMock(return_value=AIMessage(content="Test response from LLM"))
     llm.bind_tools = MagicMock(return_value=llm)
     return llm
 

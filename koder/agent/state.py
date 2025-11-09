@@ -54,7 +54,9 @@ class AgentState(TypedDict, total=False):
 
     # Plan structure
     plan: dict[str, Any] | None  # {steps: [...], reasoning: str, estimated_time: str}
-    plan_status: Literal["pending", "approved", "rejected", "executing", "completed"] | None
+    plan_status: (
+        Literal["pending", "approved", "rejected", "executing", "completed"] | None
+    )
     plan_created_at: str | None
     plan_approved_at: str | None
 

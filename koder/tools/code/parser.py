@@ -22,12 +22,14 @@ class ParsePythonTool(ReadOnlyTool):
         "Returns structured information about the code."
     )
 
-    parser: Parser = Field(default_factory=lambda: Parser())
+    parser: Parser = Field(default=None)
 
     def __init__(self, **kwargs):
         """Initialize with Python language support."""
         super().__init__(**kwargs)
-        self.parser.set_language(Language(tspython.language()))
+        # Initialize parser with Python language (tree-sitter 0.20+ API)
+        PY_LANGUAGE = Language(tspython.language())
+        self.parser = Parser(PY_LANGUAGE)
 
     def _run(self, source: str) -> str:
         """
@@ -103,7 +105,9 @@ class ParsePythonTool(ReadOnlyTool):
                 name_node = n.child_by_field_name("name")
                 if name_node:
                     func_name = code[name_node.start_byte : name_node.end_byte]
-                    structure["functions"].append({"name": func_name, "line": n.start_point[0] + 1})
+                    structure["functions"].append(
+                        {"name": func_name, "line": n.start_point[0] + 1}
+                    )
 
             elif n.type == "class_definition":
                 # Get class name
@@ -119,14 +123,18 @@ class ParsePythonTool(ReadOnlyTool):
                             if child.type == "function_definition":
                                 method_name_node = child.child_by_field_name("name")
                                 if method_name_node:
-                                    method_name = code[method_name_node.start_byte : method_name_node.end_byte]
+                                    method_name = code[
+                                        method_name_node.start_byte : method_name_node.end_byte
+                                    ]
                                     methods.append(method_name)
 
-                    structure["classes"].append({
-                        "name": class_name,
-                        "line": n.start_point[0] + 1,
-                        "methods": methods,
-                    })
+                    structure["classes"].append(
+                        {
+                            "name": class_name,
+                            "line": n.start_point[0] + 1,
+                            "methods": methods,
+                        }
+                    )
 
             # Traverse children
             for child in n.children:

@@ -3,6 +3,7 @@
 # Default model configurations
 DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-4-5-20250929"
 DEFAULT_OPENAI_MODEL = "gpt-4-turbo-preview"
+DEFAULT_DEEPSEEK_MODEL = "deepseek-chat"
 DEFAULT_TEMPERATURE = 0.7
 DEFAULT_MAX_TOKENS = 4096
 

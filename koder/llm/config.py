@@ -2,9 +2,9 @@
 
 from typing import Literal, Optional
 
-from koder.llm.providers import anthropic, openai
+from koder.llm.providers import anthropic, deepseek, openai
 
-ProviderType = Literal["anthropic", "openai"]
+ProviderType = Literal["anthropic", "openai", "deepseek"]
 
 
 def get_default_model(provider: ProviderType) -> str:
@@ -13,6 +13,8 @@ def get_default_model(provider: ProviderType) -> str:
         return anthropic.CLAUDE_SONNET
     elif provider == "openai":
         return openai.GPT_4_TURBO
+    elif provider == "deepseek":
+        return deepseek.DEEPSEEK_CHAT
     else:
         raise ValueError(f"Unknown provider: {provider}")
 
@@ -26,6 +28,8 @@ def get_model_info(provider: ProviderType, model: Optional[str] = None) -> dict:
         return anthropic.get_model_info(model)
     elif provider == "openai":
         return openai.get_model_info(model)
+    elif provider == "deepseek":
+        return deepseek.get_model_info(model)
     else:
         raise ValueError(f"Unknown provider: {provider}")
 
@@ -36,5 +40,7 @@ def validate_model(provider: ProviderType, model: str) -> bool:
         return model in anthropic.MODEL_CONTEXT_WINDOWS
     elif provider == "openai":
         return model in openai.MODEL_CONTEXT_WINDOWS
+    elif provider == "deepseek":
+        return model in deepseek.MODEL_CONTEXT_WINDOWS
     else:
         return False

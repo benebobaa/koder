@@ -135,7 +135,9 @@ def should_generate_plan(state: AgentState) -> Literal["generate", "skip"]:
     return "generate"
 
 
-def check_plan_approval(state: AgentState) -> Literal["approved", "rejected", "pending"]:
+def check_plan_approval(
+    state: AgentState,
+) -> Literal["approved", "rejected", "pending"]:
     """
     Check plan approval status.
 

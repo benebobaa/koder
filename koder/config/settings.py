@@ -8,11 +8,13 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class LLMSettings(BaseSettings):
     """LLM provider configuration."""
 
-    provider: Literal["anthropic", "openai"] = "anthropic"
+    provider: Literal["anthropic", "openai", "deepseek"] = "anthropic"
     anthropic_api_key: str = Field(default="", alias="ANTHROPIC_API_KEY")
     openai_api_key: str = Field(default="", alias="OPENAI_API_KEY")
+    deepseek_api_key: str = Field(default="", alias="DEEPSEEK_API_KEY")
     anthropic_model: str = "claude-sonnet-4-5-20250929"
     openai_model: str = "gpt-4-turbo-preview"
+    deepseek_model: str = "deepseek-chat"
     temperature: float = 0.7
     max_tokens: int = 4096
 
@@ -87,9 +89,7 @@ class Settings(BaseSettings):
     # Nested settings
     llm: LLMSettings = Field(default_factory=LLMSettings)
     embeddings: EmbeddingsSettings = Field(default_factory=EmbeddingsSettings)
-    observability: ObservabilitySettings = Field(
-        default_factory=ObservabilitySettings
-    )
+    observability: ObservabilitySettings = Field(default_factory=ObservabilitySettings)
     storage: StorageSettings = Field(default_factory=StorageSettings)
     mcp: MCPSettings = Field(default_factory=MCPSettings)
 

@@ -82,7 +82,7 @@ def info():
     info_text = f"""
 [bold]Configuration:[/bold]
   LLM Provider: {settings.llm.provider}
-  Model: {settings.llm.anthropic_model if settings.llm.provider == 'anthropic' else settings.llm.openai_model}
+  Model: {settings.llm.anthropic_model if settings.llm.provider == "anthropic" else settings.llm.openai_model}
   Temperature: {settings.llm.temperature}
   Max Tokens: {settings.llm.max_tokens}
 

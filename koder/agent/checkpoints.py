@@ -6,7 +6,7 @@ from typing import Optional
 from langgraph.checkpoint.sqlite import SqliteSaver
 
 
-def get_checkpointer(checkpoint_path: str) -> SqliteSaver:
+def get_checkpointer(checkpoint_path: str):
     """
     Get SQLite checkpointer instance.
 
@@ -14,12 +14,17 @@ def get_checkpointer(checkpoint_path: str) -> SqliteSaver:
         checkpoint_path: Path to SQLite database file
 
     Returns:
-        Configured SqliteSaver instance
+        Configured SqliteSaver instance (context manager in v3.0+)
     """
     # Ensure directory exists
     Path(checkpoint_path).parent.mkdir(parents=True, exist_ok=True)
 
-    return SqliteSaver.from_conn_string(checkpoint_path)
+    # In langgraph-checkpoint-sqlite v3.0+, from_conn_string returns a context manager
+    # We need to enter it to get the actual checkpointer instance
+    conn_manager = SqliteSaver.from_conn_string(checkpoint_path)
+    # Enter the context manager to get the checkpointer
+    checkpointer = conn_manager.__enter__()
+    return checkpointer
 
 
 def get_checkpoint_config(

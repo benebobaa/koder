@@ -38,9 +38,16 @@ class ToolRegistry:
         self._tools: dict[str, type[BaseTool]] = {}
         self._categories: dict[str, list[str]] = {}
         self._instances: dict[str, BaseTool] = {}
-        self._tool_metadata: dict[str, dict] = {}  # Stores needs_approval, is_read_only, etc.
+        self._tool_metadata: dict[
+            str, dict
+        ] = {}  # Stores needs_approval, is_read_only, etc.
 
-    def register(self, category: str = "general", needs_approval: bool = False, is_read_only: bool = False):
+    def register(
+        self,
+        category: str = "general",
+        needs_approval: bool = False,
+        is_read_only: bool = False,
+    ):
         """
         Decorator for registering tools with metadata.
 
@@ -204,8 +211,7 @@ class ToolRegistry:
             List of read-only tool instances
         """
         read_only_names = [
-            name for name in self._tools.keys()
-            if self.is_read_only_tool(name)
+            name for name in self._tools.keys() if self.is_read_only_tool(name)
         ]
         return [self.get_tool(name) for name in read_only_names if self.get_tool(name)]
 
@@ -217,8 +223,7 @@ class ToolRegistry:
             List of write tool instances
         """
         write_names = [
-            name for name in self._tools.keys()
-            if not self.is_read_only_tool(name)
+            name for name in self._tools.keys() if not self.is_read_only_tool(name)
         ]
         return [self.get_tool(name) for name in write_names if self.get_tool(name)]
 
@@ -230,8 +235,7 @@ class ToolRegistry:
             List of approval-required tool instances
         """
         approval_names = [
-            name for name in self._tools.keys()
-            if self.needs_approval(name)
+            name for name in self._tools.keys() if self.needs_approval(name)
         ]
         return [self.get_tool(name) for name in approval_names if self.get_tool(name)]
 
