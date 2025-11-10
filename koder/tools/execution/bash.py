@@ -119,9 +119,7 @@ class BashTool(KoderTool, WriteToolMixin):
 
         return str(work_dir)
 
-    def _execute_command(
-        self, command: str, cwd: str
-    ) -> tuple[int, str, str]:
+    def _execute_command(self, command: str, cwd: str) -> tuple[int, str, str]:
         """
         Execute a command with safety controls.
 
@@ -135,12 +133,14 @@ class BashTool(KoderTool, WriteToolMixin):
         try:
             # Prepare environment with limited variables
             env = os.environ.copy()
-            env.update({
-                "PATH": "/usr/bin:/bin:/usr/local/bin",  # Restricted PATH
-                "HOME": str(Path.home()),
-                "PWD": cwd,
-                "SHELL": "/bin/bash",
-            })
+            env.update(
+                {
+                    "PATH": "/usr/bin:/bin:/usr/local/bin",  # Restricted PATH
+                    "HOME": str(Path.home()),
+                    "PWD": cwd,
+                    "SHELL": "/bin/bash",
+                }
+            )
 
             # Start the process
             process = subprocess.Popen(
@@ -158,7 +158,7 @@ class BashTool(KoderTool, WriteToolMixin):
             if self.timeout_seconds > 0:
                 timer = threading.Timer(
                     self.timeout_seconds,
-                    lambda: process.kill() if process.poll() is None else None
+                    lambda: process.kill() if process.poll() is None else None,
                 )
                 timer.start()
             else:
@@ -183,11 +183,11 @@ class BashTool(KoderTool, WriteToolMixin):
 
                 stdout_thread = threading.Thread(
                     target=read_stream,
-                    args=(process.stdout, stdout_lines, self.max_output_size)
+                    args=(process.stdout, stdout_lines, self.max_output_size),
                 )
                 stderr_thread = threading.Thread(
                     target=read_stream,
-                    args=(process.stderr, stderr_lines, self.max_output_size)
+                    args=(process.stderr, stderr_lines, self.max_output_size),
                 )
 
                 stdout_thread.start()
@@ -260,18 +260,22 @@ class BashTool(KoderTool, WriteToolMixin):
             ]
 
             if stdout:
-                output_lines.extend([
-                    "STDOUT:",
-                    stdout,
-                    "",
-                ])
+                output_lines.extend(
+                    [
+                        "STDOUT:",
+                        stdout,
+                        "",
+                    ]
+                )
 
             if stderr:
-                output_lines.extend([
-                    "STDERR:",
-                    stderr,
-                    "",
-                ])
+                output_lines.extend(
+                    [
+                        "STDERR:",
+                        stderr,
+                        "",
+                    ]
+                )
 
             if exit_code == 0:
                 output_lines.append("✅ Command executed successfully")

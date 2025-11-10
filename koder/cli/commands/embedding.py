@@ -7,11 +7,23 @@ from typing import Optional
 
 import typer
 from rich.console import Console
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
+from rich.progress import (
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    BarColumn,
+    TaskProgressColumn,
+)
 from rich.table import Table
 from rich.tree import Tree
 
-from koder.cli.ui.console import console, print_error, print_info, print_success, print_warning
+from koder.cli.ui.console import (
+    console,
+    print_error,
+    print_info,
+    print_success,
+    print_warning,
+)
 from koder.config.settings import get_settings
 from koder.memory.embeddings import GoogleEmbeddings
 from koder.memory.metrics import get_metrics
@@ -28,14 +40,11 @@ def quickstart(
         ".",
         "--workspace",
         "-w",
-        help="Workspace directory to set up for semantic search"
+        help="Workspace directory to set up for semantic search",
     ),
     force: bool = typer.Option(
-        False,
-        "--force",
-        "-f",
-        help="Force re-initialization even if already set up"
-    )
+        False, "--force", "-f", help="Force re-initialization even if already set up"
+    ),
 ):
     """Quick setup for semantic search - indexes entire workspace."""
     settings = get_settings()
@@ -51,16 +60,18 @@ def quickstart(
                 try:
                     embeddings = GoogleEmbeddings(
                         api_key=settings.embeddings.google_api_key,
-                        model=settings.embeddings.model
+                        model=settings.embeddings.model,
                     )
                     vector_store = VectorStore(
                         embeddings=embeddings,
-                        persist_directory=settings.storage.vector_store_path
+                        persist_directory=settings.storage.vector_store_path,
                     )
                     doc_count = vector_store.count()
                     if doc_count > 0:
                         print_warning(f"Already found {doc_count} indexed documents.")
-                        print_info("Use --force to re-index or run 'koder embedding search' to test.")
+                        print_info(
+                            "Use --force to re-index or run 'koder embedding search' to test."
+                        )
                         return
                 except Exception:
                     pass
@@ -69,20 +80,17 @@ def quickstart(
 
         # Initialize embedding system
         embeddings = GoogleEmbeddings(
-            api_key=settings.embeddings.google_api_key,
-            model=settings.embeddings.model
+            api_key=settings.embeddings.google_api_key, model=settings.embeddings.model
         )
 
         # Initialize vector store
         vector_store = VectorStore(
-            embeddings=embeddings,
-            persist_directory=settings.storage.vector_store_path
+            embeddings=embeddings, persist_directory=settings.storage.vector_store_path
         )
 
         # Initialize retriever
         retriever = CodebaseRetriever(
-            vector_store=vector_store,
-            workspace_path=workspace
+            vector_store=vector_store, workspace_path=workspace
         )
 
         # Clear existing data if force
@@ -95,19 +103,50 @@ def quickstart(
 
         # Define comprehensive file patterns
         patterns = [
-            "**/*.py", "**/*.js", "**/*.ts", "**/*.jsx", "**/*.tsx",
-            "**/*.md", "**/*.json", "**/*.yaml", "**/*.yml", "**/*.txt",
-            "**/*.sql", "**/*.sh", "**/*.go", "**/*.rs", "**/*.java",
-            "**/*.cpp", "**/*.c", "**/*.h", "**/*.dockerfile",
-            "**/Dockerfile*"
+            "**/*.py",
+            "**/*.js",
+            "**/*.ts",
+            "**/*.jsx",
+            "**/*.tsx",
+            "**/*.md",
+            "**/*.json",
+            "**/*.yaml",
+            "**/*.yml",
+            "**/*.txt",
+            "**/*.sql",
+            "**/*.sh",
+            "**/*.go",
+            "**/*.rs",
+            "**/*.java",
+            "**/*.cpp",
+            "**/*.c",
+            "**/*.h",
+            "**/*.dockerfile",
+            "**/Dockerfile*",
         ]
 
         # Skip common non-source directories
         skip_dirs = {
-            ".git", ".vscode", ".idea", "__pycache__", "node_modules",
-            ".venv", "venv", "env", ".env", "dist", "build", "target",
-            ".pytest_cache", ".mypy_cache", ".tox", "coverage", ".next",
-            ".nuxt", "site-packages", "spm-packages"
+            ".git",
+            ".vscode",
+            ".idea",
+            "__pycache__",
+            "node_modules",
+            ".venv",
+            "venv",
+            "env",
+            ".env",
+            "dist",
+            "build",
+            "target",
+            ".pytest_cache",
+            ".mypy_cache",
+            ".tox",
+            "coverage",
+            ".next",
+            ".nuxt",
+            "site-packages",
+            "spm-packages",
         }
 
         total_files = 0
@@ -120,21 +159,24 @@ def quickstart(
             TextColumn("[progress.description]{task.description}"),
             BarColumn(),
             TaskProgressColumn(),
-            console=console
+            console=console,
         ) as progress:
-
             # Count files
             all_files = []
             for pattern in patterns:
                 files = [
-                    f for f in workspace_path.glob(pattern)
-                    if f.is_file() and not any(skip_dir in f.parts for skip_dir in skip_dirs)
+                    f
+                    for f in workspace_path.glob(pattern)
+                    if f.is_file()
+                    and not any(skip_dir in f.parts for skip_dir in skip_dirs)
                 ]
                 all_files.extend(files)
 
             # Remove duplicates
             all_files = list(set(all_files))
-            progress_task = progress.add_task("Indexing workspace...", total=len(all_files))
+            progress_task = progress.add_task(
+                "Indexing workspace...", total=len(all_files)
+            )
 
             for file_path in all_files:
                 try:
@@ -173,6 +215,7 @@ def quickstart(
 def validate():
     """Validate embedding system connectivity and performance."""
     import time
+
     print_info("Validating embedding system connectivity...")
 
     try:
@@ -181,8 +224,7 @@ def validate():
 
         # Create embeddings with validation
         embeddings = GoogleEmbeddings(
-            api_key=settings.embeddings.google_api_key,
-            model=settings.embeddings.model
+            api_key=settings.embeddings.google_api_key, model=settings.embeddings.model
         )
 
         # Test embedding generation
@@ -194,15 +236,14 @@ def validate():
 
         # Test vector store
         vector_store = VectorStore(
-            embeddings=embeddings,
-            persist_directory=settings.storage.vector_store_path
+            embeddings=embeddings, persist_directory=settings.storage.vector_store_path
         )
 
         # Test vector store operations
         from langchain_core.documents import Document
+
         test_doc = Document(
-            page_content="Test document for validation",
-            metadata={"test": True}
+            page_content="Test document for validation", metadata={"test": True}
         )
 
         doc_ids = vector_store.add_documents([test_doc])
@@ -213,22 +254,24 @@ def validate():
             vector_store.delete(doc_ids)
 
         validation = {
-            "overall_status": "fully_operational" if result and search_results else "embeddings_failed",
+            "overall_status": "fully_operational"
+            if result and search_results
+            else "embeddings_failed",
             "embeddings": {
                 "connected": True,
                 "model": settings.embeddings.model,
                 "test_embedding": {
                     "dimensions": len(result),
                     "first_5_values": result[:5],
-                    "response_time_ms": round(response_time, 2)
-                }
+                    "response_time_ms": round(response_time, 2),
+                },
             },
             "vector_store": {
                 "connected": bool(search_results),
                 "documents_count": vector_store.count(),
                 "test_addition": len(doc_ids) > 0,
-                "test_search": len(search_results) > 0
-            }
+                "test_search": len(search_results) > 0,
+            },
         }
 
         # Create validation results table
@@ -243,7 +286,7 @@ def validate():
             "healthy": ("✅", "green"),
             "embeddings_failed": ("❌", "red"),
             "vector_store_failed": ("⚠️", "yellow"),
-            "unknown": ("❓", "dim")
+            "unknown": ("❓", "dim"),
         }
 
         overall_status = validation["overall_status"]
@@ -251,7 +294,7 @@ def validate():
         validation_table.add_row(
             "Overall System",
             f"[{color}]{emoji} {overall_status.replace('_', ' ').title()}[/{color}]",
-            "Complete system validation"
+            "Complete system validation",
         )
 
         # Google Embeddings
@@ -263,16 +306,10 @@ def validate():
                 f"Dimensions: {test_emb.get('dimensions', 'N/A')}\n"
                 f"Response: {test_emb.get('response_time_ms', 'N/A')}ms"
             )
-            validation_table.add_row(
-                "Google Gemini",
-                "✅ Connected",
-                emb_details
-            )
+            validation_table.add_row("Google Gemini", "✅ Connected", emb_details)
         else:
             validation_table.add_row(
-                "Google Gemini",
-                "❌ Failed",
-                emb.get("error", "Unknown error")
+                "Google Gemini", "❌ Failed", emb.get("error", "Unknown error")
             )
 
         # Vector Store
@@ -283,16 +320,10 @@ def validate():
                 f"Test Addition: {'✅' if vs.get('test_addition') else '❌'}\n"
                 f"Test Search: {'✅' if vs.get('test_search') else '❌'}"
             )
-            validation_table.add_row(
-                "Vector Store",
-                "✅ Operational",
-                vs_details
-            )
+            validation_table.add_row("Vector Store", "✅ Operational", vs_details)
         else:
             validation_table.add_row(
-                "Vector Store",
-                "❌ Failed",
-                vs.get("error", "Unknown error")
+                "Vector Store", "❌ Failed", vs.get("error", "Unknown error")
             )
 
         console.print(validation_table)
@@ -328,17 +359,11 @@ def validate():
 @app.command()
 def watch(
     workspace: str = typer.Option(
-        ".",
-        "--workspace",
-        "-w",
-        help="Workspace directory to watch"
+        ".", "--workspace", "-w", help="Workspace directory to watch"
     ),
     debounce: int = typer.Option(
-        2,
-        "--debounce",
-        "-d",
-        help="Seconds to wait before processing file changes"
-    )
+        2, "--debounce", "-d", help="Seconds to wait before processing file changes"
+    ),
 ):
     """Watch for file changes and automatically update embeddings."""
     import asyncio
@@ -383,35 +408,21 @@ def watch(
 @app.command()
 def index(
     workspace: str = typer.Option(
-        ".",
-        "--workspace",
-        "-w",
-        help="Workspace directory to index"
+        ".", "--workspace", "-w", help="Workspace directory to index"
     ),
     pattern: Optional[str] = typer.Option(
         None,
         "--pattern",
         "-p",
-        help="File pattern to index (e.g., '**/*.py', '**/*.js'). If not specified, uses default patterns"
+        help="File pattern to index (e.g., '**/*.py', '**/*.js'). If not specified, uses default patterns",
     ),
     force: bool = typer.Option(
-        False,
-        "--force",
-        "-f",
-        help="Force re-indexing even if already indexed"
+        False, "--force", "-f", help="Force re-indexing even if already indexed"
     ),
     chunk_size: int = typer.Option(
-        1500,
-        "--chunk-size",
-        "-c",
-        help="Text chunk size for processing"
+        1500, "--chunk-size", "-c", help="Text chunk size for processing"
     ),
-    verbose: bool = typer.Option(
-        False,
-        "--verbose",
-        "-v",
-        help="Verbose output"
-    )
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output"),
 ):
     """Index files for semantic search."""
     settings = get_settings()
@@ -422,26 +433,25 @@ def index(
             print_info("Initializing embedding system...")
 
         embeddings = GoogleEmbeddings(
-            api_key=settings.embeddings.google_api_key,
-            model=settings.embeddings.model
+            api_key=settings.embeddings.google_api_key, model=settings.embeddings.model
         )
 
         # Initialize vector store
         vector_store = VectorStore(
-            embeddings=embeddings,
-            persist_directory=settings.storage.vector_store_path
+            embeddings=embeddings, persist_directory=settings.storage.vector_store_path
         )
 
         # Initialize retriever
         retriever = CodebaseRetriever(
-            vector_store=vector_store,
-            workspace_path=workspace
+            vector_store=vector_store, workspace_path=workspace
         )
 
         # Check if already indexed
         doc_count = retriever.vector_store.count()
         if doc_count > 0 and not force:
-            print_warning(f"Already indexed {doc_count} documents. Use --force to re-index.")
+            print_warning(
+                f"Already indexed {doc_count} documents. Use --force to re-index."
+            )
             return
 
         if force and doc_count > 0:
@@ -454,27 +464,60 @@ def index(
             patterns = [pattern]
         else:
             patterns = [
-                "**/*.py", "**/*.js", "**/*.ts", "**/*.jsx", "**/*.tsx",
-                "**/*.md", "**/*.json", "**/*.yaml", "**/*.yml", "**/*.txt",
-                "**/*.sql", "**/*.sh", "**/*.go", "**/*.rs", "**/*.java",
-                "**/*.cpp", "**/*.c", "**/*.h", "**/*.dockerfile",
-                "**/Dockerfile*"
+                "**/*.py",
+                "**/*.js",
+                "**/*.ts",
+                "**/*.jsx",
+                "**/*.tsx",
+                "**/*.md",
+                "**/*.json",
+                "**/*.yaml",
+                "**/*.yml",
+                "**/*.txt",
+                "**/*.sql",
+                "**/*.sh",
+                "**/*.go",
+                "**/*.rs",
+                "**/*.java",
+                "**/*.cpp",
+                "**/*.c",
+                "**/*.h",
+                "**/*.dockerfile",
+                "**/Dockerfile*",
             ]
 
         workspace_path = Path(workspace).resolve()
 
         # Skip common non-source directories
         skip_dirs = {
-            ".git", ".vscode", ".idea", "__pycache__", "node_modules",
-            ".venv", "venv", "env", ".env", "dist", "build", "target",
-            ".pytest_cache", ".mypy_cache", ".tox", "coverage", ".next",
-            ".nuxt", "site-packages", "spm-packages"
+            ".git",
+            ".vscode",
+            ".idea",
+            "__pycache__",
+            "node_modules",
+            ".venv",
+            "venv",
+            "env",
+            ".env",
+            "dist",
+            "build",
+            "target",
+            ".pytest_cache",
+            ".mypy_cache",
+            ".tox",
+            "coverage",
+            ".next",
+            ".nuxt",
+            "site-packages",
+            "spm-packages",
         }
 
         print_info(f"Indexing workspace: {workspace_path}")
 
         if verbose:
-            print_info("Using incremental indexing (only changed files will be processed)")
+            print_info(
+                "Using incremental indexing (only changed files will be processed)"
+            )
 
         start_time = time.time()
 
@@ -483,9 +526,8 @@ def index(
             TextColumn("[progress.description]{task.description}"),
             BarColumn(),
             TaskProgressColumn(),
-            console=console
+            console=console,
         ) as progress:
-
             progress_task = progress.add_task("Indexing workspace...", total=100)
 
             # Use smart incremental indexing
@@ -493,7 +535,7 @@ def index(
                 directory_path=".",
                 patterns=patterns,
                 chunk_size=chunk_size,
-                force=force  # Force re-indexing if specified
+                force=force,  # Force re-indexing if specified
             )
 
             progress.update(progress_task, completed=100)
@@ -509,7 +551,7 @@ def index(
         console.print(f"⏱️  Time taken: {elapsed_time:.2f} seconds")
         console.print(f"🚫 Errors: {stats['error_files']}")
 
-        if verbose and stats['error_files'] > 0:
+        if verbose and stats["error_files"] > 0:
             console.print("\n[dim]Some files encountered errors during indexing.[/dim]")
             console.print("[dim]Use --verbose to see detailed error information.[/dim]")
 
@@ -521,29 +563,16 @@ def index(
 @app.command()
 def search(
     query: str = typer.Argument(..., help="Search query"),
-    workspace: str = typer.Option(
-        ".",
-        "--workspace",
-        "-w",
-        help="Workspace directory"
-    ),
+    workspace: str = typer.Option(".", "--workspace", "-w", help="Workspace directory"),
     max_results: int = typer.Option(
-        5,
-        "--max-results",
-        "-k",
-        help="Maximum number of results"
+        5, "--max-results", "-k", help="Maximum number of results"
     ),
     file_filter: Optional[str] = typer.Option(
-        None,
-        "--file-filter",
-        "-f",
-        help="Filter results by file pattern"
+        None, "--file-filter", "-f", help="Filter results by file pattern"
     ),
     show_content: bool = typer.Option(
-        True,
-        "--show-content/--no-show-content",
-        help="Show file content in results"
-    )
+        True, "--show-content/--no-show-content", help="Show file content in results"
+    ),
 ):
     """Search indexed code using semantic search."""
     settings = get_settings()
@@ -551,26 +580,25 @@ def search(
     try:
         # Initialize embedding system
         embeddings = GoogleEmbeddings(
-            api_key=settings.embeddings.google_api_key,
-            model=settings.embeddings.model
+            api_key=settings.embeddings.google_api_key, model=settings.embeddings.model
         )
 
         # Initialize vector store
         vector_store = VectorStore(
-            embeddings=embeddings,
-            persist_directory=settings.storage.vector_store_path
+            embeddings=embeddings, persist_directory=settings.storage.vector_store_path
         )
 
         # Initialize retriever
         retriever = CodebaseRetriever(
-            vector_store=vector_store,
-            workspace_path=workspace
+            vector_store=vector_store, workspace_path=workspace
         )
 
         # Check if anything is indexed
         doc_count = retriever.vector_store.count()
         if doc_count == 0:
-            print_warning("No indexed documents found. Run 'koder embedding index' first.")
+            print_warning(
+                "No indexed documents found. Run 'koder embedding index' first."
+            )
             return
 
         print_info(f"Searching for: '{query}'")
@@ -591,7 +619,9 @@ def search(
             chunk_idx = doc.metadata.get("chunk_index", 0)
             total_chunks = doc.metadata.get("total_chunks", 1)
 
-            console.print(f"[cyan]{i}. {file_path}[/cyan] (chunk {chunk_idx + 1}/{total_chunks})")
+            console.print(
+                f"[cyan]{i}. {file_path}[/cyan] (chunk {chunk_idx + 1}/{total_chunks})"
+            )
 
             if show_content:
                 console.print("[dim]" + "=" * 60 + "[/dim]")
@@ -611,18 +641,10 @@ def search(
 
 @app.command()
 def status(
-    workspace: str = typer.Option(
-        ".",
-        "--workspace",
-        "-w",
-        help="Workspace directory"
-    ),
+    workspace: str = typer.Option(".", "--workspace", "-w", help="Workspace directory"),
     details: bool = typer.Option(
-        False,
-        "--details",
-        "-d",
-        help="Show detailed file information"
-    )
+        False, "--details", "-d", help="Show detailed file information"
+    ),
 ):
     """Show embedding system status."""
     settings = get_settings()
@@ -630,14 +652,12 @@ def status(
     try:
         # Initialize embedding system
         embeddings = GoogleEmbeddings(
-            api_key=settings.embeddings.google_api_key,
-            model=settings.embeddings.model
+            api_key=settings.embeddings.google_api_key, model=settings.embeddings.model
         )
 
         # Initialize vector store
         vector_store = VectorStore(
-            embeddings=embeddings,
-            persist_directory=settings.storage.vector_store_path
+            embeddings=embeddings, persist_directory=settings.storage.vector_store_path
         )
 
         # Get collection info
@@ -673,7 +693,9 @@ def status(
                         ext = Path(file_path).suffix or "no_extension"
                         file_types[ext] = file_types.get(ext, 0) + 1
 
-                for ext, count in sorted(file_types.items(), key=lambda x: x[1], reverse=True):
+                for ext, count in sorted(
+                    file_types.items(), key=lambda x: x[1], reverse=True
+                ):
                     console.print(f"  {ext or 'no_ext'}: {count} chunks")
 
             except Exception:
@@ -681,7 +703,9 @@ def status(
 
         if doc_count == 0:
             console.print("\n[bold yellow]💡 No indexed documents found.[/bold yellow]")
-            console.print("Run 'koder embedding index' to start indexing your codebase.")
+            console.print(
+                "Run 'koder embedding index' to start indexing your codebase."
+            )
 
     except Exception as e:
         print_error(f"Status check failed: {str(e)}")
@@ -690,22 +714,16 @@ def status(
 
 @app.command()
 def clear(
-    workspace: str = typer.Option(
-        ".",
-        "--workspace",
-        "-w",
-        help="Workspace directory"
-    ),
+    workspace: str = typer.Option(".", "--workspace", "-w", help="Workspace directory"),
     confirm: bool = typer.Option(
-        False,
-        "--confirm",
-        "-y",
-        help="Skip confirmation prompt"
-    )
+        False, "--confirm", "-y", help="Skip confirmation prompt"
+    ),
 ):
     """Clear all indexed embeddings."""
     if not confirm:
-        if not typer.confirm("⚠️  This will delete all indexed embeddings. Are you sure?"):
+        if not typer.confirm(
+            "⚠️  This will delete all indexed embeddings. Are you sure?"
+        ):
             print_info("Operation cancelled.")
             return
 
@@ -714,13 +732,11 @@ def clear(
 
         # Initialize vector store
         embeddings = GoogleEmbeddings(
-            api_key=settings.embeddings.google_api_key,
-            model=settings.embeddings.model
+            api_key=settings.embeddings.google_api_key, model=settings.embeddings.model
         )
 
         vector_store = VectorStore(
-            embeddings=embeddings,
-            persist_directory=settings.storage.vector_store_path
+            embeddings=embeddings, persist_directory=settings.storage.vector_store_path
         )
 
         # Clear embeddings
@@ -735,24 +751,11 @@ def clear(
 
 @app.command()
 def metrics(
-    workspace: str = typer.Option(
-        ".",
-        "--workspace",
-        "-w",
-        help="Workspace directory"
-    ),
+    workspace: str = typer.Option(".", "--workspace", "-w", help="Workspace directory"),
     detailed: bool = typer.Option(
-        False,
-        "--detailed",
-        "-d",
-        help="Show detailed metrics"
+        False, "--detailed", "-d", help="Show detailed metrics"
     ),
-    reset: bool = typer.Option(
-        False,
-        "--reset",
-        "-r",
-        help="Reset all metrics"
-    )
+    reset: bool = typer.Option(False, "--reset", "-r", help="Reset all metrics"),
 ):
     """Show embedding system metrics and performance data."""
     if reset:
@@ -779,9 +782,13 @@ def metrics(
         overview_table.add_column("Value", style="green")
 
         overview_table.add_row("Workspace", summary["workspace"])
-        overview_table.add_row("Health Status", _get_health_status_display(summary["health"]))
+        overview_table.add_row(
+            "Health Status", _get_health_status_display(summary["health"])
+        )
         overview_table.add_row("Last Updated", summary["last_updated"][:19] + "Z")
-        overview_table.add_row("Total Chunks", str(summary["documents"]["total_chunks"]))
+        overview_table.add_row(
+            "Total Chunks", str(summary["documents"]["total_chunks"])
+        )
 
         console.print(overview_table)
 
@@ -797,13 +804,13 @@ def metrics(
             "Indexing",
             str(summary["performance"]["indexing"]["files_indexed"]),
             f"{summary['performance']['indexing']['average_time']:.2f}s",
-            f"{summary['performance']['indexing']['total_time']:.1f}s"
+            f"{summary['performance']['indexing']['total_time']:.1f}s",
         )
         perf_table.add_row(
             "Searching",
             str(summary["performance"]["searching"]["total_searches"]),
             f"{summary['performance']['searching']['average_time']:.2f}s",
-            f"N/A"
+            f"N/A",
         )
 
         console.print(perf_table)
@@ -814,7 +821,9 @@ def metrics(
         activity_table.add_column("Activity", style="cyan")
         activity_table.add_column("Count", style="white")
 
-        activity_table.add_row("Files Indexed", str(summary["recent_activity"]["indexing"]))
+        activity_table.add_row(
+            "Files Indexed", str(summary["recent_activity"]["indexing"])
+        )
         activity_table.add_row("Searches", str(summary["recent_activity"]["searching"]))
         activity_table.add_row("Errors", str(summary["recent_activity"]["errors"]))
 
@@ -870,7 +879,7 @@ def metrics(
                     date,
                     str(stats.get("files_processed", 0)),
                     str(stats.get("searches", 0)),
-                    f"{stats.get('duration', 0):.1f}s"
+                    f"{stats.get('duration', 0):.1f}s",
                 )
 
             console.print(daily_table)
@@ -887,11 +896,163 @@ def _get_health_status_display(status: str) -> str:
         "degraded": ("⚠️  Degraded", "yellow"),
         "unhealthy": ("❌ Unhealthy", "red"),
         "error": ("🔥 Error", "red"),
-        "unknown": ("❓ Unknown", "dim")
+        "unknown": ("❓ Unknown", "dim"),
     }
 
     text, color = status_colors.get(status, status_colors["unknown"])
     return f"[{color}]{text}[/{color}]"
+
+
+@app.command()
+def mode(
+    mode: Optional[str] = typer.Argument(
+        None, help="Set retrieval mode: off, lexical, primary, reranker"
+    ),
+):
+    """View or change the retrieval mode."""
+    settings = get_settings()
+
+    if mode is None:
+        # Display current mode
+        console.print(f"\n[bold]Current Retrieval Mode:[/bold] [cyan]{settings.embeddings.mode}[/cyan]\n")
+
+        console.print("[bold]Available Modes:[/bold]")
+        console.print("  • [cyan]off[/cyan]      - No retrieval (fastest, baseline for testing)")
+        console.print("  • [cyan]lexical[/cyan]  - Keyword search only (fast, free, good for exact matches)")
+        console.print("  • [cyan]primary[/cyan]  - Embeddings only (semantic search, higher cost)")
+        console.print("  • [cyan]reranker[/cyan] - Hybrid: lexical + embedding re-rank [green](recommended)[/green]\n")
+
+        console.print(f"[bold]Settings:[/bold]")
+        console.print(f"  Enabled: {settings.embeddings.enabled}")
+        console.print(f"  Monthly Budget: ${settings.embeddings.max_monthly_cost_usd}")
+        console.print(f"  Daily API Limit: {settings.embeddings.max_daily_api_calls} calls\n")
+    else:
+        # Validate and set mode
+        valid_modes = ["off", "lexical", "primary", "reranker"]
+        if mode not in valid_modes:
+            print_error(f"Invalid mode '{mode}'. Must be one of: {', '.join(valid_modes)}")
+            raise typer.Exit(1)
+
+        print_info(f"To change mode, set environment variable: EMBEDDINGS_MODE={mode}")
+        print_info(f"Or update your .env file with: EMBEDDINGS_MODE={mode}")
+        print_success(f"Current mode: {settings.embeddings.mode}")
+
+
+@app.command()
+def cost():
+    """Show API cost tracking and budget status."""
+    from koder.memory.cost_tracker import get_cost_tracker
+
+    try:
+        tracker = get_cost_tracker()
+        stats = tracker.get_usage_stats(days=30)
+
+        console.print("\n[bold]💰 Cost Tracking & Budget Status[/bold]\n")
+
+        # Budget status
+        budget_table = Table(title="Budget Status")
+        budget_table.add_column("Metric", style="cyan")
+        budget_table.add_column("Value", style="green")
+        budget_table.add_column("Limit", style="yellow")
+        budget_table.add_column("Status", style="white")
+
+        today_calls = stats["budget"]["today_calls"]
+        max_daily = stats["budget"]["max_daily_calls"]
+        daily_pct = (today_calls / max(max_daily, 1)) * 100
+        daily_status = "✅" if daily_pct < 80 else "⚠️" if daily_pct < 100 else "❌"
+
+        month_cost = stats["budget"]["month_cost_usd"]
+        max_monthly = stats["budget"]["max_monthly_cost_usd"]
+        monthly_pct = (month_cost / max(max_monthly, 0.01)) * 100
+        monthly_status = "✅" if monthly_pct < 80 else "⚠️" if monthly_pct < 100 else "❌"
+
+        budget_table.add_row(
+            "Today's API Calls",
+            str(today_calls),
+            str(max_daily),
+            f"{daily_status} {daily_pct:.0f}%"
+        )
+        budget_table.add_row(
+            "Month's Cost",
+            f"${month_cost:.4f}",
+            f"${max_monthly:.2f}",
+            f"{monthly_status} {monthly_pct:.0f}%"
+        )
+
+        console.print(budget_table)
+
+        # Usage stats
+        console.print("\n[bold]📊 Usage Statistics (Last 30 Days)[/bold]")
+        stats_table = Table()
+        stats_table.add_column("Metric", style="cyan")
+        stats_table.add_column("Value", style="white")
+
+        stats_table.add_row("Total API Requests", str(stats["total_requests"]))
+        stats_table.add_row("Total API Calls", str(stats["total_calls"]))
+        stats_table.add_row("Total Cost", f"${stats['total_cost_usd']:.4f}")
+        stats_table.add_row("Avg Daily Calls", f"{stats['avg_daily_calls']:.1f}")
+        stats_table.add_row("Avg Daily Cost", f"${stats['avg_daily_cost_usd']:.4f}")
+
+        console.print(stats_table)
+
+        # Calls by mode
+        if stats["calls_by_mode"]:
+            console.print("\n[bold]🔍 Calls by Mode[/bold]")
+            mode_table = Table()
+            mode_table.add_column("Mode", style="cyan")
+            mode_table.add_column("Calls", style="white")
+            mode_table.add_column("Percentage", style="yellow")
+
+            total_mode_calls = sum(stats["calls_by_mode"].values())
+            for mode, calls in sorted(stats["calls_by_mode"].items(), key=lambda x: x[1], reverse=True):
+                pct = (calls / max(total_mode_calls, 1)) * 100
+                mode_table.add_row(mode or "unknown", str(calls), f"{pct:.1f}%")
+
+            console.print(mode_table)
+
+        # Warnings
+        if daily_pct >= 80:
+            console.print(f"\n[yellow]⚠️  Warning: Daily API call limit at {daily_pct:.0f}%[/yellow]")
+        if monthly_pct >= 80:
+            console.print(f"\n[yellow]⚠️  Warning: Monthly cost budget at {monthly_pct:.0f}%[/yellow]")
+
+        if daily_pct >= 100 or monthly_pct >= 100:
+            console.print("\n[red]❌ Budget limit exceeded! API calls will be blocked.[/red]")
+            console.print("[dim]Adjust limits with EMBEDDINGS_MAX_DAILY_API_CALLS or EMBEDDINGS_MAX_MONTHLY_COST_USD[/dim]")
+
+    except Exception as e:
+        print_error(f"Failed to get cost stats: {str(e)}")
+        raise typer.Exit(1)
+
+
+@app.command()
+def compare(
+    days: int = typer.Option(7, "--days", "-d", help="Number of days to analyze"),
+):
+    """Show A/B test comparison between retrieval modes."""
+    from koder.memory.ab_test import get_ab_test_manager
+
+    try:
+        ab_manager = get_ab_test_manager()
+
+        if not ab_manager.enabled:
+            print_warning("A/B testing is currently disabled")
+            print_info("Enable with: EMBEDDINGS_AB_TEST_ENABLED=true")
+            return
+
+        # Generate and display report
+        report = ab_manager.generate_comparison_report(days=days)
+        console.print(report)
+
+        # Show configuration
+        console.print(f"\n[bold]Configuration:[/bold]")
+        console.print(f"  A/B Testing: {'✅ Enabled' if ab_manager.enabled else '❌ Disabled'}")
+        console.print(f"  Treatment Ratio: {ab_manager.ratio:.0%}")
+        console.print(f"  Period: Last {days} days\n")
+
+    except Exception as e:
+        print_error(f"Failed to generate comparison: {str(e)}")
+        raise typer.Exit(1)
 
 
 if __name__ == "__main__":

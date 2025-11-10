@@ -104,7 +104,12 @@ def run(
             initial_state["messages"] = [message]
 
             # Run agent
-            for event in agent.stream(initial_state, config=get_checkpoint_config(thread_id, recursion_limit=settings.recursion_limit)):
+            for event in agent.stream(
+                initial_state,
+                config=get_checkpoint_config(
+                    thread_id, recursion_limit=settings.recursion_limit
+                ),
+            ):
                 for node, output in event.items():
                     if "messages" in output:
                         for msg in output["messages"]:
@@ -112,6 +117,7 @@ def run(
         else:
             # Use checkpointer context manager
             from koder.agent.checkpoints import get_checkpointer
+
             with get_checkpointer(settings.storage.checkpoint_path) as checkpointer:
                 # Create agent with checkpointer
                 agent = create_agent(llm, tools, checkpointer, mode=mode)
@@ -126,7 +132,12 @@ def run(
                 initial_state["messages"] = [message]
 
                 # Run agent
-                for event in agent.stream(initial_state, config=get_checkpoint_config(thread_id, recursion_limit=settings.recursion_limit)):
+                for event in agent.stream(
+                    initial_state,
+                    config=get_checkpoint_config(
+                        thread_id, recursion_limit=settings.recursion_limit
+                    ),
+                ):
                     for node, output in event.items():
                         if "messages" in output:
                             for msg in output["messages"]:

@@ -115,7 +115,9 @@ class VectorStore:
         """
         return self.vectorstore.similarity_search_with_score(query, k=k, filter=filter)
 
-    def delete(self, ids: Optional[list[str]] = None, where: Optional[dict] = None) -> None:
+    def delete(
+        self, ids: Optional[list[str]] = None, where: Optional[dict] = None
+    ) -> None:
         """
         Delete documents by ID or metadata filter.
 

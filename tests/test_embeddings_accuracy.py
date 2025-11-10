@@ -23,6 +23,7 @@ console = Console()
 @dataclass
 class TestResult:
     """Individual test result."""
+
     query: str
     expected_matches: int
     actual_matches: int
@@ -38,6 +39,7 @@ class TestResult:
 @dataclass
 class TestSuite:
     """Complete test suite results."""
+
     test_name: str
     total_tests: int
     passed_tests: int
@@ -65,24 +67,24 @@ class EmbeddingAccuracyTester:
     def setup(self) -> bool:
         """Set up the test environment."""
         try:
-            console.print("[bold cyan]🔧 Setting up embedding test environment...[/bold cyan]")
+            console.print(
+                "[bold cyan]🔧 Setting up embedding test environment...[/bold cyan]"
+            )
 
             # Initialize embeddings
             self.embeddings = GoogleEmbeddings(
                 api_key="AIzaSyD2Lmun2MWtIHbkpem-Ofdy9COU_deBwnM",
-                model="models/text-embedding-004"
+                model="models/text-embedding-004",
             )
 
             # Initialize vector store
             self.vector_store = VectorStore(
-                embeddings=self.embeddings,
-                persist_directory="./data/vector_store"
+                embeddings=self.embeddings, persist_directory="./data/vector_store"
             )
 
             # Initialize retriever
             self.retriever = CodebaseRetriever(
-                vector_store=self.vector_store,
-                workspace_path=self.workspace_path
+                vector_store=self.vector_store, workspace_path=self.workspace_path
             )
 
             # Initialize context tool
@@ -93,7 +95,9 @@ class EmbeddingAccuracyTester:
             console.print(f"📊 Found {doc_count} documents in vector store")
 
             if doc_count == 0:
-                console.print("[yellow]⚠️  No indexed documents found. Testing with limited scope.[/yellow]")
+                console.print(
+                    "[yellow]⚠️  No indexed documents found. Testing with limited scope.[/yellow]"
+                )
                 return False
 
             return True
@@ -126,7 +130,9 @@ class EmbeddingAccuracyTester:
             score += 2
 
         # File path relevance
-        if any(word in file_path.lower() for word in query_lower.split() if len(word) > 2):
+        if any(
+            word in file_path.lower() for word in query_lower.split() if len(word) > 2
+        ):
             score += 1
 
         # Content length bonus (longer matches get higher scores)
@@ -159,7 +165,7 @@ class EmbeddingAccuracyTester:
                     "response_time_ms": response_time,
                     "actual_matches": 0,
                     "relevance_scores": [],
-                    "top_result_relevance": 0
+                    "top_result_relevance": 0,
                 }
 
             # Calculate relevance scores
@@ -174,7 +180,7 @@ class EmbeddingAccuracyTester:
                 "response_time_ms": response_time,
                 "actual_matches": len(results),
                 "relevance_scores": relevance_scores,
-                "top_result_relevance": relevance_scores[0] if relevance_scores else 0
+                "top_result_relevance": relevance_scores[0] if relevance_scores else 0,
             }
 
         except Exception as e:
@@ -185,7 +191,7 @@ class EmbeddingAccuracyTester:
                 "actual_matches": 0,
                 "relevance_scores": [],
                 "top_result_relevance": 0,
-                "error": str(e)
+                "error": str(e),
             }
 
     def test_exact_matches(self) -> TestSuite:
@@ -197,8 +203,8 @@ class EmbeddingAccuracyTester:
             "def main():",
             "#!/usr/bin/env python3",
             "from koder.cli.app import app",
-            "print(\"Hello, World!\")",
-            "Koder - AI-powered code assistant"
+            'print("Hello, World!")',
+            "Koder - AI-powered code assistant",
         ]
 
         results = []
@@ -208,21 +214,29 @@ class EmbeddingAccuracyTester:
                 # For exact matches, we expect 1-3 matches
                 expected_matches = 1
                 precision = 1.0 if test_result["actual_matches"] > 0 else 0.0
-                recall = 1.0 if test_result["actual_matches"] >= expected_matches else 0.0
-                f1_score = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0.0
+                recall = (
+                    1.0 if test_result["actual_matches"] >= expected_matches else 0.0
+                )
+                f1_score = (
+                    2 * (precision * recall) / (precision + recall)
+                    if (precision + recall) > 0
+                    else 0.0
+                )
 
-                results.append(TestResult(
-                    query=query,
-                    expected_matches=expected_matches,
-                    actual_matches=test_result["actual_matches"],
-                    relevance_scores=test_result["relevance_scores"],
-                    response_time_ms=test_result["response_time_ms"],
-                    precision=precision,
-                    recall=recall,
-                    f1_score=f1_score,
-                    top_result_relevance=test_result["top_result_relevance"],
-                    results=test_result["results"]
-                ))
+                results.append(
+                    TestResult(
+                        query=query,
+                        expected_matches=expected_matches,
+                        actual_matches=test_result["actual_matches"],
+                        relevance_scores=test_result["relevance_scores"],
+                        response_time_ms=test_result["response_time_ms"],
+                        precision=precision,
+                        recall=recall,
+                        f1_score=f1_score,
+                        top_result_relevance=test_result["top_result_relevance"],
+                        results=test_result["results"],
+                    )
+                )
 
         return self._create_test_suite("Exact Match Tests", results)
 
@@ -235,7 +249,7 @@ class EmbeddingAccuracyTester:
             "application initialization",
             "program startup code",
             "cli application setup",
-            "executable script structure"
+            "executable script structure",
         ]
 
         results = []
@@ -247,18 +261,20 @@ class EmbeddingAccuracyTester:
                 recall = 1.0  # We can't measure recall without ground truth
                 f1_score = precision
 
-                results.append(TestResult(
-                    query=query,
-                    expected_matches=1,  # Expected at least one match
-                    actual_matches=test_result["actual_matches"],
-                    relevance_scores=test_result["relevance_scores"],
-                    response_time_ms=test_result["response_time_ms"],
-                    precision=precision,
-                    recall=recall,
-                    f1_score=f1_score,
-                    top_result_relevance=test_result["top_result_relevance"],
-                    results=test_result["results"]
-                ))
+                results.append(
+                    TestResult(
+                        query=query,
+                        expected_matches=1,  # Expected at least one match
+                        actual_matches=test_result["actual_matches"],
+                        relevance_scores=test_result["relevance_scores"],
+                        response_time_ms=test_result["response_time_ms"],
+                        precision=precision,
+                        recall=recall,
+                        f1_score=f1_score,
+                        top_result_relevance=test_result["top_result_relevance"],
+                        results=test_result["results"],
+                    )
+                )
 
         return self._create_test_suite("Semantic Search Tests", results)
 
@@ -282,22 +298,28 @@ class EmbeddingAccuracyTester:
             if "error" not in test_result:
                 # For edge cases, we expect 0 matches (good system should handle gracefully)
                 expected_matches = 0
-                precision = 1.0 if test_result["actual_matches"] == expected_matches else 0.0
+                precision = (
+                    1.0 if test_result["actual_matches"] == expected_matches else 0.0
+                )
                 recall = 1.0
-                f1_score = 1.0 if test_result["actual_matches"] == expected_matches else 0.0
+                f1_score = (
+                    1.0 if test_result["actual_matches"] == expected_matches else 0.0
+                )
 
-                results.append(TestResult(
-                    query=f"'{query}'",
-                    expected_matches=expected_matches,
-                    actual_matches=test_result["actual_matches"],
-                    relevance_scores=test_result["relevance_scores"],
-                    response_time_ms=test_result["response_time_ms"],
-                    precision=precision,
-                    recall=recall,
-                    f1_score=f1_score,
-                    top_result_relevance=test_result["top_result_relevance"],
-                    results=test_result["results"]
-                ))
+                results.append(
+                    TestResult(
+                        query=f"'{query}'",
+                        expected_matches=expected_matches,
+                        actual_matches=test_result["actual_matches"],
+                        relevance_scores=test_result["relevance_scores"],
+                        response_time_ms=test_result["response_time_ms"],
+                        precision=precision,
+                        recall=recall,
+                        f1_score=f1_score,
+                        top_result_relevance=test_result["top_result_relevance"],
+                        results=test_result["results"],
+                    )
+                )
 
         return self._create_test_suite("Edge Case Tests", results)
 
@@ -308,7 +330,7 @@ class EmbeddingAccuracyTester:
         context_queries = [
             "main entry point",
             "application setup",
-            "Python code structure"
+            "Python code structure",
         ]
 
         results = []
@@ -319,8 +341,8 @@ class EmbeddingAccuracyTester:
                 response_time = (time.time() - start_time) * 1000
 
                 # Parse results to extract document information
-                lines = context.split('\n')
-                matches = [line for line in lines if 'From ' in line]
+                lines = context.split("\n")
+                matches = [line for line in lines if "From " in line]
 
                 # Calculate relevance scores
                 relevance_scores = []
@@ -331,20 +353,28 @@ class EmbeddingAccuracyTester:
                 expected_matches = 1  # Expect at least one match
                 precision = 1.0 if len(matches) > 0 else 0.0
                 recall = 1.0 if len(matches) >= expected_matches else 0.0
-                f1_score = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0.0
+                f1_score = (
+                    2 * (precision * recall) / (precision + recall)
+                    if (precision + recall) > 0
+                    else 0.0
+                )
 
-                results.append(TestResult(
-                    query=query,
-                    expected_matches=expected_matches,
-                    actual_matches=len(matches),
-                    relevance_scores=relevance_scores,
-                    response_time_ms=response_time,
-                    precision=precision,
-                    recall=recall,
-                    f1_score=f1_score,
-                    top_result_relevance=relevance_scores[0] if relevance_scores else 0,
-                    results=[{"content": match} for match in matches]
-                ))
+                results.append(
+                    TestResult(
+                        query=query,
+                        expected_matches=expected_matches,
+                        actual_matches=len(matches),
+                        relevance_scores=relevance_scores,
+                        response_time_ms=response_time,
+                        precision=precision,
+                        recall=recall,
+                        f1_score=f1_score,
+                        top_result_relevance=relevance_scores[0]
+                        if relevance_scores
+                        else 0,
+                        results=[{"content": match} for match in matches],
+                    )
+                )
 
             except Exception as e:
                 console.print(f"[red]Error testing context tool: {str(e)}[/red]")
@@ -360,7 +390,7 @@ class EmbeddingAccuracyTester:
             "Class initialization method",
             "Error handling pattern",
             "Database connection query",
-            "String processing operation"
+            "String processing operation",
         ]
 
         generation_results = []
@@ -370,28 +400,42 @@ class EmbeddingAccuracyTester:
                 embedding = self.embeddings.embed_query(text)
                 response_time = (time.time() - start_time) * 1000
 
-                generation_results.append({
-                    "text": text,
-                    "text_length": len(text),
-                    "embedding_dimensions": len(embedding),
-                    "response_time_ms": response_time,
-                    "first_5_values": embedding[:5],
-                    "last_5_values": embedding[-5:],
-                    "sample_value": embedding[0]
-                })
+                generation_results.append(
+                    {
+                        "text": text,
+                        "text_length": len(text),
+                        "embedding_dimensions": len(embedding),
+                        "response_time_ms": response_time,
+                        "first_5_values": embedding[:5],
+                        "last_5_values": embedding[-5:],
+                        "sample_value": embedding[0],
+                    }
+                )
 
             except Exception as e:
-                console.print(f"[red]Error generating embedding for '{text}': {str(e)}[/red]")
+                console.print(
+                    f"[red]Error generating embedding for '{text}': {str(e)}[/red]"
+                )
 
         return {
             "total_tests": len(test_texts),
             "successful_tests": len(generation_results),
-            "avg_response_time": statistics.mean([r["response_time_ms"] for r in generation_results]) if generation_results else 0,
-            "avg_dimensions": statistics.mean([r["embedding_dimensions"] for r in generation_results]) if generation_results else 0,
-            "results": generation_results
+            "avg_response_time": statistics.mean(
+                [r["response_time_ms"] for r in generation_results]
+            )
+            if generation_results
+            else 0,
+            "avg_dimensions": statistics.mean(
+                [r["embedding_dimensions"] for r in generation_results]
+            )
+            if generation_results
+            else 0,
+            "results": generation_results,
         }
 
-    def _create_test_suite(self, test_name: str, results: List[TestResult]) -> TestSuite:
+    def _create_test_suite(
+        self, test_name: str, results: List[TestResult]
+    ) -> TestSuite:
         """Create a test suite from results."""
         if not results:
             return TestSuite(
@@ -403,7 +447,7 @@ class EmbeddingAccuracyTester:
                 avg_recall=0.0,
                 avg_f1_score=0.0,
                 top_relevance_avg=0.0,
-                results=[]
+                results=[],
             )
 
         passed_tests = sum(1 for r in results if r.f1_score > 0)
@@ -416,8 +460,10 @@ class EmbeddingAccuracyTester:
             avg_precision=statistics.mean([r.precision for r in results]),
             avg_recall=statistics.mean([r.recall for r in results]),
             avg_f1_score=statistics.mean([r.f1_score for r in results]),
-            top_relevance_avg=statistics.mean([r.top_result_relevance for r in results]),
-            results=results
+            top_relevance_avg=statistics.mean(
+                [r.top_result_relevance for r in results]
+            ),
+            results=results,
         )
 
     def run_all_tests(self) -> List[TestSuite]:
@@ -442,7 +488,9 @@ class EmbeddingAccuracyTester:
 
         total_tests = sum(suite.total_tests for suite in test_suites)
         total_passed = sum(suite.passed_tests for suite in test_suites)
-        overall_success_rate = (total_passed / total_tests) * 100 if total_tests > 0 else 0
+        overall_success_rate = (
+            (total_passed / total_tests) * 100 if total_tests > 0 else 0
+        )
 
         # Create results table
         results_table = Table(title="Test Results Summary")
@@ -454,14 +502,18 @@ class EmbeddingAccuracyTester:
         results_table.add_column("Avg F1 Score", style="magenta")
 
         for suite in test_suites:
-            success_rate = (suite.passed_tests / suite.total_tests) * 100 if suite.total_tests > 0 else 0
+            success_rate = (
+                (suite.passed_tests / suite.total_tests) * 100
+                if suite.total_tests > 0
+                else 0
+            )
             results_table.add_row(
                 suite.test_name,
                 str(suite.total_tests),
                 str(suite.passed_tests),
                 f"{success_rate:.1f}%",
                 f"{suite.avg_response_time:.1f}ms",
-                f"{suite.avg_f1_score:.3f}"
+                f"{suite.avg_f1_score:.3f}",
             )
 
         console.print(results_table)
@@ -479,7 +531,11 @@ class EmbeddingAccuracyTester:
 🌟 Top Relevance Avg: {statistics.mean([suite.top_relevance_avg for suite in test_suites]):.1f}
             """,
             title="Test Summary",
-            border_style="green" if overall_success_rate > 70 else "yellow" if overall_success_rate > 40 else "red"
+            border_style="green"
+            if overall_success_rate > 70
+            else "yellow"
+            if overall_success_rate > 40
+            else "red",
         )
         console.print(summary_panel)
 
@@ -488,14 +544,16 @@ class EmbeddingAccuracyTester:
             "total_tests": total_tests,
             "passed_tests": total_passed,
             "test_suites": [asdict(suite) for suite in test_suites],
-            "timestamp": time.time()
+            "timestamp": time.time(),
         }
 
-    def save_report(self, report: Dict[str, Any], filename: str = "embedding_accuracy_report.json"):
+    def save_report(
+        self, report: Dict[str, Any], filename: str = "embedding_accuracy_report.json"
+    ):
         """Save the test report to a file."""
         report_path = Path(filename)
         try:
-            with open(report_path, 'w') as f:
+            with open(report_path, "w") as f:
                 json.dump(report, f, indent=2, default=str)
             console.print(f"✅ Report saved to: {report_path}")
         except Exception as e:
@@ -506,15 +564,17 @@ def main():
     """Run the comprehensive embedding accuracy tests."""
     tester = EmbeddingAccuracyTester()
 
-    console.print(Panel(
-        "[bold]🔍 Koder Embedding Search Accuracy Tester[/bold]\n\n"
-        "This tool comprehensively tests your embedding system's\n"
-        "search accuracy, performance, and integration capabilities.\n"
-        "It will test exact matches, semantic understanding,\n"
-        "edge cases, and AI agent integration.",
-        title="Embedding Accuracy Tester",
-        border_style="cyan"
-    ))
+    console.print(
+        Panel(
+            "[bold]🔍 Koder Embedding Search Accuracy Tester[/bold]\n\n"
+            "This tool comprehensively tests your embedding system's\n"
+            "search accuracy, performance, and integration capabilities.\n"
+            "It will test exact matches, semantic understanding,\n"
+            "edge cases, and AI agent integration.",
+            title="Embedding Accuracy Tester",
+            border_style="cyan",
+        )
+    )
 
     # Run all tests
     test_suites = tester.run_all_tests()

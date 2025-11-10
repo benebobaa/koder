@@ -27,9 +27,79 @@ class LLMSettings(BaseSettings):
 class EmbeddingsSettings(BaseSettings):
     """Embeddings configuration."""
 
+    # Core settings
+    enabled: bool = Field(
+        default=True,
+        description="Enable/disable embedding system entirely"
+    )
+    mode: Literal["off", "lexical", "primary", "reranker"] = Field(
+        default="reranker",
+        description=(
+            "Retrieval mode: "
+            "'off' = no retrieval, "
+            "'lexical' = keyword search only (free), "
+            "'primary' = embeddings only (current behavior), "
+            "'reranker' = lexical first-pass then embedding re-rank (recommended)"
+        )
+    )
+
+    # API settings
     google_api_key: str = Field(default="", alias="GOOGLE_API_KEY")
     model: str = "models/text-embedding-004"
-    dimension: int = 768
+    dimension: int = Field(
+        default=768,
+        description="Embedding dimensions (768 or 512 for cost savings, 3072 max)"
+    )
+
+    # Cost controls
+    max_monthly_cost_usd: float = Field(
+        default=50.0,
+        description="Maximum monthly budget for embedding API calls in USD"
+    )
+    max_daily_api_calls: int = Field(
+        default=1000,
+        description="Maximum API calls per day to prevent runaway costs"
+    )
+
+    # Caching
+    cache_ttl_hours: int = Field(
+        default=24,
+        description="How long to cache embedding results (hours)"
+    )
+    cache_enabled: bool = Field(
+        default=True,
+        description="Enable persistent caching of embeddings"
+    )
+
+    # File watching
+    watch_files: bool = Field(
+        default=True,
+        description="Auto-enable file watching to keep index fresh"
+    )
+    watch_debounce_seconds: int = Field(
+        default=2,
+        description="Debounce delay for file change detection"
+    )
+
+    # Retrieval settings
+    lexical_top_k: int = Field(
+        default=20,
+        description="Number of lexical results for re-ranking mode"
+    )
+    final_top_k: int = Field(
+        default=5,
+        description="Final number of results to return"
+    )
+
+    # A/B testing
+    ab_test_enabled: bool = Field(
+        default=False,
+        description="Enable A/B testing to compare retrieval modes"
+    )
+    ab_test_ratio: float = Field(
+        default=0.5,
+        description="Ratio of tasks using embeddings (0.0-1.0) in A/B test"
+    )
 
     model_config = SettingsConfigDict(
         env_prefix="EMBEDDINGS_",
@@ -80,19 +150,14 @@ class WebSearchSettings(BaseSettings):
     """Web search configuration."""
 
     backend: Literal["duckduckgo", "tavily", "brave"] = Field(
-        default="duckduckgo",
-        description="Web search backend to use"
+        default="duckduckgo", description="Web search backend to use"
     )
     tavily_api_key: str = Field(default="", alias="TAVILY_API_KEY")
     brave_api_key: str = Field(default="", alias="BRAVE_API_KEY")
     max_results: int = Field(
-        default=5,
-        description="Maximum number of search results to return"
+        default=5, description="Maximum number of search results to return"
     )
-    safe_search: bool = Field(
-        default=True,
-        description="Enable safe search filtering"
-    )
+    safe_search: bool = Field(default=True, description="Enable safe search filtering")
 
     model_config = SettingsConfigDict(
         env_prefix="WEB_SEARCH_",
@@ -122,8 +187,7 @@ class Settings(BaseSettings):
     max_iterations: int = 10
     timeout_seconds: int = 300
     recursion_limit: int = Field(
-        default=100,
-        description="Maximum recursion depth for LangGraph execution"
+        default=100, description="Maximum recursion depth for LangGraph execution"
     )
 
 

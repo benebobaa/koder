@@ -1,0 +1,88 @@
+# Dependabot configuration file
+# https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+
+version: 2
+updates:
+  # Monitor dependencies in pyproject.toml
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "bene"  # Replace with actual maintainer username(s)
+    assignees:
+      - "bene"  # Replace with actual maintainer username(s)
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "python"
+    allow:
+      # Allow both direct and indirect dependencies
+      - dependency-type: "direct"
+      - dependency-type: "indirect"
+    ignore:
+      # Ignore specific packages that should be updated manually
+      - dependency-name: "pytest"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "mypy"
+        update-types: ["version-update:semver-major"]
+    groups:
+      # Group LangChain ecosystem updates together
+      langchain-dependencies:
+        dependency-type: "direct"
+        patterns:
+          - "langchain*"
+          - "langgraph*"
+      # Group development dependencies together
+      dev-dependencies:
+        dependency-type: "development"
+        patterns:
+          - "pytest*"
+          - "ruff"
+          - "mypy"
+          - "coverage*"
+          - "pre-commit"
+
+  # Monitor GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "bene"  # Replace with actual maintainer username(s)
+    assignees:
+      - "bene"  # Replace with actual maintainer username(s)
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    labels:
+      - "github-actions"
+      - "ci"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+
+  # Monitor Docker dependencies (if you add Dockerfile in the future)
+  # - package-ecosystem: "docker"
+  #   directory: "/"
+  #   schedule:
+  #     interval: "weekly"
+  #   reviewers:
+  #     - "bene"
+  #   assignees:
+  #     - "bene"
+  #   commit-message:
+  #     prefix: "docker"
+  #     include: "scope"
+  #   labels:
+  #     - "docker"
+  #     - "dependencies"

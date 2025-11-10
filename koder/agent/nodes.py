@@ -9,6 +9,8 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, Tool
 from langchain_core.tools import BaseTool
 
 from koder.agent.state import AgentState
+from koder.config.settings import get_settings
+from koder.memory.ab_test import get_ab_test_manager
 
 
 # Simple context cache to minimize API calls
@@ -57,12 +59,14 @@ def reasoning_node(
 
         # Add context if available
         if context and context != "Context retrieval is not available.":
-            context_message = SystemMessage(content=f"""CONTEXT FROM CODEBASE:
+            context_message = SystemMessage(
+                content=f"""CONTEXT FROM CODEBASE:
 {context}
 
 Use this context to better understand the codebase and make more informed decisions.
 The context above provides relevant information about similar patterns, existing implementations,
-and code structure that should inform your approach to the task.""")
+and code structure that should inform your approach to the task."""
+            )
             enhanced_messages.append(context_message)
 
         # Add the original messages (usually contains the task)
@@ -189,12 +193,16 @@ def final_response_node(state: AgentState, llm: BaseChatModel) -> dict[str, Any]
 
 def _auto_gather_context(task: str, tools: list[BaseTool]) -> str:
     """
-    Automatically gather relevant context using embeddings before reasoning.
+    Automatically gather relevant context using hybrid search (lexical + embeddings).
 
-    This function makes the embedding investment worthwhile by providing
+    This function makes the context retrieval investment worthwhile by providing
     intelligent context to the agent before it makes decisions.
 
-    Includes caching to minimize API calls and improve performance.
+    Features:
+    - Hybrid search (lexical + embedding re-ranker)
+    - A/B testing support to measure retrieval impact
+    - Caching to minimize API calls and improve performance
+    - Adapts to configured retrieval mode (off/lexical/primary/reranker)
 
     Args:
         task: The current task description
@@ -204,50 +212,71 @@ def _auto_gather_context(task: str, tools: list[BaseTool]) -> str:
         Relevant context from the codebase or empty string if unavailable
     """
     try:
+        settings = get_settings()
+
+        # Check if context retrieval is disabled
+        if not settings.embeddings.enabled or settings.embeddings.mode == "off":
+            return ""
+
+        # A/B testing: Deterministically assign task to variant
+        if settings.embeddings.ab_test_enabled:
+            ab_manager = get_ab_test_manager()
+            task_id = hashlib.md5(task.encode()).hexdigest()
+            variant = ab_manager.get_variant(task_id)
+
+            # Control group: no embeddings
+            if variant == "control":
+                return ""
+
         # Create cache key from task
         cache_key = hashlib.md5(task.encode()).hexdigest()
         current_time = time.time()
 
-        # Check cache first
+        # Check cache first (respecting configured TTL)
+        cache_ttl = settings.embeddings.cache_ttl_hours * 3600
         if cache_key in _context_cache:
             cached_data = _context_cache[cache_key]
-            if current_time - cached_data['timestamp'] < _cache_ttl:
-                return cached_data['context']
+            if current_time - cached_data["timestamp"] < cache_ttl:
+                return cached_data["context"]
 
         # Find the context retrieval tool
         context_tool = None
         for tool in tools:
-            if hasattr(tool, 'name') and tool.name == "context_retrieval":
+            if hasattr(tool, "name") and tool.name == "context_retrieval":
                 context_tool = tool
                 break
 
         if not context_tool:
             return ""
 
-        # Use semantic search to get relevant context
-        # Get more results for better context (5 instead of default 3)
-        context = context_tool._run(task, max_results=5)
+        # Use hybrid search to get relevant context
+        # Get configurable number of results
+        max_results = settings.embeddings.final_top_k
+        context = context_tool._run(task, max_results=max_results)
 
         # Filter out unhelpful responses
-        if (not context or
-            context == "Context retrieval is not available." or
-            context == "No relevant context found." or
-            "Error retrieving context:" in context or
-            len(context.strip()) < 50):
+        if (
+            not context
+            or context == "Context retrieval is not available."
+            or context == "No relevant context found."
+            or "Error retrieving context:" in context
+            or len(context.strip()) < 50
+        ):
             return ""
 
         # Add context quality indicator
-        lines = context.split('\n')
-        file_count = len([line for line in lines if line.strip().startswith('[') and 'From ' in line])
+        lines = context.split("\n")
+        file_count = len(
+            [line for line in lines if line.strip().startswith("[") and "From " in line]
+        )
 
         if file_count > 0:
-            result = f"{context}\n\n*(Found {file_count} relevant files using semantic search)*"
+            # Add mode indicator for transparency
+            mode_indicator = settings.embeddings.mode
+            result = f"{context}\n\n*(Found {file_count} relevant files using {mode_indicator} search)*"
 
             # Cache the result
-            _context_cache[cache_key] = {
-                'context': result,
-                'timestamp': current_time
-            }
+            _context_cache[cache_key] = {"context": result, "timestamp": current_time}
 
             return result
         else:

@@ -156,7 +156,7 @@ class PythonTool(KoderTool, WriteToolMixin):
         try:
             # Write code to temporary file
             with tempfile.NamedTemporaryFile(
-                mode='w', suffix='.py', delete=False, dir=cwd
+                mode="w", suffix=".py", delete=False, dir=cwd
             ) as f:
                 f.write(code)
                 temp_file = f.name
@@ -164,11 +164,13 @@ class PythonTool(KoderTool, WriteToolMixin):
             try:
                 # Prepare environment
                 env = os.environ.copy()
-                env.update({
-                    "PYTHONPATH": cwd,
-                    "PYTHONIOENCODING": "utf-8",
-                    "PYTHONDONTWRITEBYTECODE": "1",
-                })
+                env.update(
+                    {
+                        "PYTHONPATH": cwd,
+                        "PYTHONIOENCODING": "utf-8",
+                        "PYTHONDONTWRITEBYTECODE": "1",
+                    }
+                )
 
                 # Start the process
                 process = subprocess.Popen(
@@ -186,7 +188,7 @@ class PythonTool(KoderTool, WriteToolMixin):
                 if self.timeout_seconds > 0:
                     timer = threading.Timer(
                         self.timeout_seconds,
-                        lambda: process.kill() if process.poll() is None else None
+                        lambda: process.kill() if process.poll() is None else None,
                     )
                     timer.start()
                 else:
@@ -200,18 +202,19 @@ class PythonTool(KoderTool, WriteToolMixin):
                     # Read stdout and stderr concurrently
                     def read_stream(stream, output_lines):
                         for line in iter(stream.readline, ""):
-                            if self.max_output_size > 0 and len(output_lines) * 100 > self.max_output_size:
+                            if (
+                                self.max_output_size > 0
+                                and len(output_lines) * 100 > self.max_output_size
+                            ):
                                 output_lines.append("[OUTPUT TRUNCATED]")
                                 break
                             output_lines.append(line.rstrip())
 
                     stdout_thread = threading.Thread(
-                        target=read_stream,
-                        args=(process.stdout, stdout_lines)
+                        target=read_stream, args=(process.stdout, stdout_lines)
                     )
                     stderr_thread = threading.Thread(
-                        target=read_stream,
-                        args=(process.stderr, stderr_lines)
+                        target=read_stream, args=(process.stderr, stderr_lines)
                     )
 
                     stdout_thread.start()
@@ -244,7 +247,11 @@ class PythonTool(KoderTool, WriteToolMixin):
 
         except subprocess.TimeoutExpired:
             process.kill()
-            return -1, "", f"Python execution timed out after {self.timeout_seconds} seconds"
+            return (
+                -1,
+                "",
+                f"Python execution timed out after {self.timeout_seconds} seconds",
+            )
         except Exception as e:
             return -1, "", f"Failed to execute Python code: {str(e)}"
 
@@ -290,18 +297,22 @@ class PythonTool(KoderTool, WriteToolMixin):
             ]
 
             if stdout:
-                output_lines.extend([
-                    "OUTPUT:",
-                    stdout,
-                    "",
-                ])
+                output_lines.extend(
+                    [
+                        "OUTPUT:",
+                        stdout,
+                        "",
+                    ]
+                )
 
             if stderr:
-                output_lines.extend([
-                    "ERRORS:",
-                    stderr,
-                    "",
-                ])
+                output_lines.extend(
+                    [
+                        "ERRORS:",
+                        stderr,
+                        "",
+                    ]
+                )
 
             if exit_code == 0:
                 output_lines.append("✅ Python code executed successfully")
@@ -312,6 +323,7 @@ class PythonTool(KoderTool, WriteToolMixin):
             if venv_python:
                 try:
                     import shutil
+
                     venv_dir = Path(venv_python).parent.parent
                     if venv_dir.name == ".temp_venv":
                         shutil.rmtree(venv_dir, ignore_errors=True)

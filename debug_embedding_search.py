@@ -7,6 +7,7 @@ from koder.memory.embeddings import GoogleEmbeddings
 from koder.memory.vector_store import VectorStore
 from koder.tools.context import ContextRetrievalTool
 
+
 def debug_search_comparison():
     """Debug why vector store and ContextRetrievalTool give different results."""
 
@@ -18,12 +19,11 @@ def debug_search_comparison():
     # Initialize components
     embeddings = GoogleEmbeddings(
         api_key="AIzaSyD2Lmun2MWtIHbkpem-Ofdy9COU_deBwnM",
-        model="models/text-embedding-004"
+        model="models/text-embedding-004",
     )
 
     vector_store = VectorStore(
-        embeddings=embeddings,
-        persist_directory="./data/vector_store"
+        embeddings=embeddings, persist_directory="./data/vector_store"
     )
 
     context_tool = ContextRetrievalTool(".")
@@ -40,8 +40,8 @@ def debug_search_comparison():
             vs_time = (time.time() - start_time) * 1000
             print(f"  Vector Store: {len(vs_results)} results in {vs_time:.1f}ms")
             for i, result in enumerate(vs_results):
-                content_preview = result.page_content[:50].replace('\n', '\\n')
-                print(f"    {i+1}. {content_preview}...")
+                content_preview = result.page_content[:50].replace("\n", "\\n")
+                print(f"    {i + 1}. {content_preview}...")
         except Exception as e:
             print(f"  Vector Store Error: {e}")
 
@@ -50,9 +50,11 @@ def debug_search_comparison():
             start_time = time.time()
             ct_result = context_tool._run(query, max_results=3)
             ct_time = (time.time() - start_time) * 1000
-            print(f"  Context Tool: {ct_result.count('[') if 'From ' in ct_result else 0} files in {ct_time:.1f}ms")
+            print(
+                f"  Context Tool: {ct_result.count('[') if 'From ' in ct_result else 0} files in {ct_time:.1f}ms"
+            )
             # Extract file paths from context
-            file_paths = [line for line in ct_result.split('\n') if 'From ' in line]
+            file_paths = [line for line in ct_result.split("\n") if "From " in line]
             for path in file_paths[:3]:
                 print(f"    {path}")
         except Exception as e:
@@ -61,11 +63,12 @@ def debug_search_comparison():
         # Test 3: Test vector store get_collection
         try:
             collection = vector_store.get_collection()
-            all_docs = collection.get(include=['documents', 'metadatas'])
-            doc_count = len(all_docs.get('ids', []))
+            all_docs = collection.get(include=["documents", "metadatas"])
+            doc_count = len(all_docs.get("ids", []))
             print(f"  Chroma Collection: {doc_count} documents")
         except Exception as e:
             print(f"  Collection Error: {e}")
+
 
 def test_embedding_generation():
     """Test embedding generation directly."""
@@ -77,14 +80,14 @@ def test_embedding_generation():
 
     embeddings = GoogleEmbeddings(
         api_key="AIzaSyD2Lmun2MWtIHbkpem-Ofdy9COU_deBwnM",
-        model="models/text-embedding-004"
+        model="models/text-embedding-004",
     )
 
     test_texts = [
         "main function definition",
         "Hello World program",
         "Python CLI application",
-        "koder setup command"
+        "koder setup command",
     ]
 
     print(f"Testing {len(test_texts)} different text types:")
@@ -102,6 +105,7 @@ def test_embedding_generation():
             print(f"    Sample value: {embedding[0]:.6f}")
         except Exception as e:
             print(f"  Error: {e}")
+
 
 if __name__ == "__main__":
     debug_search_comparison()

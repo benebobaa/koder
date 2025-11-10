@@ -35,19 +35,50 @@ class FileWatcher:
 
         # Supported file patterns
         self.patterns = [
-            "**/*.py", "**/*.js", "**/*.ts", "**/*.jsx", "**/*.tsx",
-            "**/*.md", "**/*.json", "**/*.yaml", "**/*.yml", "**/*.txt",
-            "**/*.sql", "**/*.sh", "**/*.go", "**/*.rs", "**/*.java",
-            "**/*.cpp", "**/*.c", "**/*.h", "**/*.dockerfile",
-            "**/Dockerfile*"
+            "**/*.py",
+            "**/*.js",
+            "**/*.ts",
+            "**/*.jsx",
+            "**/*.tsx",
+            "**/*.md",
+            "**/*.json",
+            "**/*.yaml",
+            "**/*.yml",
+            "**/*.txt",
+            "**/*.sql",
+            "**/*.sh",
+            "**/*.go",
+            "**/*.rs",
+            "**/*.java",
+            "**/*.cpp",
+            "**/*.c",
+            "**/*.h",
+            "**/*.dockerfile",
+            "**/Dockerfile*",
         ]
 
         # Skip directories
         self.skip_dirs = {
-            ".git", ".vscode", ".idea", "__pycache__", "node_modules",
-            ".venv", "venv", "env", ".env", "dist", "build", "target",
-            ".pytest_cache", ".mypy_cache", ".tox", "coverage", ".next",
-            ".nuxt", "site-packages", "spm-packages"
+            ".git",
+            ".vscode",
+            ".idea",
+            "__pycache__",
+            "node_modules",
+            ".venv",
+            "venv",
+            "env",
+            ".env",
+            "dist",
+            "build",
+            "target",
+            ".pytest_cache",
+            ".mypy_cache",
+            ".tox",
+            "coverage",
+            ".next",
+            ".nuxt",
+            "site-packages",
+            "spm-packages",
         }
 
     def _ensure_initialized(self):
@@ -61,19 +92,18 @@ class FileWatcher:
             # Initialize embedding system
             embeddings = GoogleEmbeddings(
                 api_key=settings.embeddings.google_api_key,
-                model=settings.embeddings.model
+                model=settings.embeddings.model,
             )
 
             # Initialize vector store
             vector_store = VectorStore(
                 embeddings=embeddings,
-                persist_directory=settings.storage.vector_store_path
+                persist_directory=settings.storage.vector_store_path,
             )
 
             # Initialize retriever
             self._retriever = CodebaseRetriever(
-                vector_store=vector_store,
-                workspace_path=str(self.workspace_path)
+                vector_store=vector_store, workspace_path=str(self.workspace_path)
             )
 
             logger.info("file_watcher_initialized", workspace=str(self.workspace_path))
@@ -88,8 +118,9 @@ class FileWatcher:
 
         for pattern in self.patterns:
             for file_path in self.workspace_path.glob(pattern):
-                if (file_path.is_file() and
-                    not any(skip_dir in file_path.parts for skip_dir in self.skip_dirs)):
+                if file_path.is_file() and not any(
+                    skip_dir in file_path.parts for skip_dir in self.skip_dirs
+                ):
                     # Skip large files (>1MB)
                     try:
                         if file_path.stat().st_size <= 1024 * 1024:
@@ -129,13 +160,13 @@ class FileWatcher:
                 self._file_mtimes[file_path] = mtime
 
         # Check for removed files
-        for file_path in self._file_mtodos.keys():
+        for file_path in self._file_mtimes.keys():
             if file_path not in current_files:
                 removed_files.add(file_path)
 
         # Clean up removed files from mtime tracking
         for file_path in removed_files:
-            del self._file_mtodos[file_path]
+            del self._file_mtimes[file_path]
 
         return changed_files, removed_files
 
@@ -155,7 +186,9 @@ class FileWatcher:
                     self._retriever.vector_store.delete(where={"file_path": file_path})
                     logger.info("file_removed_from_index", file_path=file_path)
                 except Exception as e:
-                    logger.error("file_removal_failed", file_path=file_path, error=str(e))
+                    logger.error(
+                        "file_removal_failed", file_path=file_path, error=str(e)
+                    )
 
             # Re-index changed files
             for file_path in changed_files:
@@ -166,14 +199,20 @@ class FileWatcher:
                     # Add new embeddings
                     ids = self._retriever.index_file(file_path, chunk_size=1500)
                     if ids:
-                        logger.info("file_reindexed", file_path=file_path, chunks=len(ids))
+                        logger.info(
+                            "file_reindexed", file_path=file_path, chunks=len(ids)
+                        )
                 except Exception as e:
-                    logger.error("file_reindex_failed", file_path=file_path, error=str(e))
+                    logger.error(
+                        "file_reindex_failed", file_path=file_path, error=str(e)
+                    )
 
             if changed_files or removed_files:
-                logger.info("index_updated",
-                          changed_count=len(changed_files),
-                          removed_count=len(removed_files))
+                logger.info(
+                    "index_updated",
+                    changed_count=len(changed_files),
+                    removed_count=len(removed_files),
+                )
 
         except Exception as e:
             logger.error("change_processing_failed", error=str(e))
@@ -187,7 +226,7 @@ class FileWatcher:
         logger.info("file_watching_started", workspace=str(self.workspace_path))
 
         # Initial scan
-        self._file_mtodos = {
+        self._file_mtimes = {
             file_path: self._get_file_mtime(file_path)
             for file_path in self._scan_files()
         }
@@ -242,20 +281,32 @@ class FileWatcher:
                 for file_path in file_paths:
                     try:
                         # Remove old embeddings
-                        self._retriever.vector_store.delete(where={"file_path": file_path})
+                        self._retriever.vector_store.delete(
+                            where={"file_path": file_path}
+                        )
 
                         # Add new embeddings
                         ids = self._retriever.index_file(file_path, chunk_size=1500)
                         if ids:
-                            logger.info("file_force_reindexed", file_path=file_path, chunks=len(ids))
+                            logger.info(
+                                "file_force_reindexed",
+                                file_path=file_path,
+                                chunks=len(ids),
+                            )
                     except Exception as e:
-                        logger.error("file_force_reindex_failed", file_path=file_path, error=str(e))
+                        logger.error(
+                            "file_force_reindex_failed",
+                            file_path=file_path,
+                            error=str(e),
+                        )
             else:
                 # Re-index all files
                 tracked_files = self._scan_files()
                 for file_path in tracked_files:
                     try:
-                        self._retriever.vector_store.delete(where={"file_path": file_path})
+                        self._retriever.vector_store.delete(
+                            where={"file_path": file_path}
+                        )
                         ids = self._retriever.index_file(file_path, chunk_size=1500)
                         if ids:
                             logger.debug("file_reindexed_full", file_path=file_path)
@@ -300,7 +351,9 @@ class FileWatcherManager:
         for watcher in self._watchers.values():
             watcher.stop_watching()
 
-    def force_reindex(self, workspace_path: str, file_paths: Optional[list[str]] = None):
+    def force_reindex(
+        self, workspace_path: str, file_paths: Optional[list[str]] = None
+    ):
         """Force re-indexing for a workspace."""
         watcher = self.get_watcher(workspace_path)
         watcher.force_reindex(file_paths)

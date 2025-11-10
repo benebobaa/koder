@@ -40,8 +40,7 @@ class DuckDuckGoBackend(SearchBackend):
                 from duckduckgo_search import DDGS
             except ImportError:
                 raise ImportError(
-                    "ddgs package not installed. "
-                    "Install with: pip install ddgs"
+                    "ddgs package not installed. Install with: pip install ddgs"
                 )
 
         try:

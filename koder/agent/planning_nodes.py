@@ -158,7 +158,7 @@ def plan_generation_node(
                     "tool": "",
                     "type": "unknown",
                     "file": "",
-                    "rationale": "Direct execution"
+                    "rationale": "Direct execution",
                 }
             ]
 
@@ -174,7 +174,7 @@ def plan_generation_node(
                     "status": "pending",
                     "activeForm": f"Working on: {request}",
                     "step_index": 0,
-                    "estimated_time": "Unknown"
+                    "estimated_time": "Unknown",
                 }
             ]
         else:
@@ -204,7 +204,7 @@ def plan_generation_node(
                     "tool": "",
                     "type": "unknown",
                     "file": "",
-                    "rationale": "Direct execution due to planning failure"
+                    "rationale": "Direct execution due to planning failure",
                 }
             ],
             "todos": [
@@ -214,7 +214,7 @@ def plan_generation_node(
                     "status": "pending",
                     "activeForm": f"Working on: {request}",
                     "step_index": 0,
-                    "estimated_time": "Unknown"
+                    "estimated_time": "Unknown",
                 }
             ],
             "files_to_create": [],
@@ -222,7 +222,7 @@ def plan_generation_node(
             "estimated_complexity": "medium",
             "estimated_time": "Unknown",
             "risks": ["Planning system failed, may need manual intervention"],
-            "created_at": datetime.now().isoformat()
+            "created_at": datetime.now().isoformat(),
         }
 
         return {
@@ -336,7 +336,7 @@ def plan_execution_node(
                 "description": description,
                 "tool_name": tool_name,
                 "result": result,
-                "status": "completed"
+                "status": "completed",
             }
 
             # Mark TODO as completed
@@ -359,7 +359,7 @@ def plan_execution_node(
                 "description": description,
                 "tool_name": tool_name,
                 "result": error_result,
-                "status": "failed"
+                "status": "failed",
             }
 
             state.setdefault("tool_outputs", []).append(step_result)
@@ -449,17 +449,19 @@ def _execute_step_with_llm(
                 results.append(result)
 
                 # Display tool result
-                if hasattr(result, '__len__') and len(str(result)) > 300:
+                if hasattr(result, "__len__") and len(str(result)) > 300:
                     # Truncate long results
                     result_str = str(result)[:300] + "..."
                 else:
                     result_str = str(result)
 
-                console.print(Panel(
-                    result_str,
-                    title=f"Tool Result: {tool_name}",
-                    border_style="blue"
-                ))
+                console.print(
+                    Panel(
+                        result_str,
+                        title=f"Tool Result: {tool_name}",
+                        border_style="blue",
+                    )
+                )
 
         return " | ".join(str(r) for r in results) if results else response.content
 
@@ -493,7 +495,9 @@ def reflection_node(state: AgentState, llm: BaseChatModel) -> dict[str, Any]:
         summary_parts.append(f"\n### What I Found:")
         for i, result in enumerate(results):
             if result.get("status") == "completed":
-                summary_parts.append(f"**{result.get('description', 'Step ' + str(i+1))}** ✅")
+                summary_parts.append(
+                    f"**{result.get('description', 'Step ' + str(i + 1))}** ✅"
+                )
                 # Extract key information from tool results
                 tool_result = result.get("result", "")
                 if "Contents of" in str(tool_result) or "Found" in str(tool_result):

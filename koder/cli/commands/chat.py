@@ -128,7 +128,9 @@ def start(
 
                 # Run agent
                 try:
-                    config = get_checkpoint_config(thread_id, recursion_limit=settings.recursion_limit)
+                    config = get_checkpoint_config(
+                        thread_id, recursion_limit=settings.recursion_limit
+                    )
 
                     # Create initial state with user message
                     initial_state = create_initial_state(

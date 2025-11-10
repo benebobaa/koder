@@ -24,7 +24,9 @@ class EmbeddingMetrics:
         """
         self.workspace_path = Path(workspace_path).resolve()
         self.settings = get_settings()
-        self.metrics_file = Path(self.settings.storage.cache_path) / "embedding_metrics.json"
+        self.metrics_file = (
+            Path(self.settings.storage.cache_path) / "embedding_metrics.json"
+        )
         self.metrics_file.parent.mkdir(parents=True, exist_ok=True)
 
         # Load existing metrics
@@ -34,7 +36,7 @@ class EmbeddingMetrics:
         """Load metrics from file."""
         try:
             if self.metrics_file.exists():
-                with open(self.metrics_file, 'r') as f:
+                with open(self.metrics_file, "r") as f:
                     return json.load(f)
         except Exception as e:
             logger.error("metrics_load_failed", error=str(e))
@@ -53,27 +55,23 @@ class EmbeddingMetrics:
                 "files_indexed": 0,
                 "files_updated": 0,
                 "files_skipped": 0,
-                "indexing_errors": 0
+                "indexing_errors": 0,
             },
             "search_stats": {
                 "total_searches": 0,
                 "average_search_time": 0.0,
                 "total_search_time": 0.0,
-                "failed_searches": 0
+                "failed_searches": 0,
             },
             "daily_stats": {},
-            "health": {
-                "status": "unknown",
-                "last_health_check": None,
-                "issues": []
-            }
+            "health": {"status": "unknown", "last_health_check": None, "issues": []},
         }
 
     def _save_metrics(self):
         """Save metrics to file."""
         try:
             self.metrics["last_updated"] = datetime.now().isoformat()
-            with open(self.metrics_file, 'w') as f:
+            with open(self.metrics_file, "w") as f:
                 json.dump(self.metrics, f, indent=2, default=str)
         except Exception as e:
             logger.error("metrics_save_failed", error=str(e))
@@ -86,7 +84,7 @@ class EmbeddingMetrics:
         files_skipped: int = 0,
         errors: int = 0,
         duration: float = 0.0,
-        file_types: Optional[Dict[str, int]] = None
+        file_types: Optional[Dict[str, int]] = None,
     ):
         """
         Record an indexing operation.
@@ -110,12 +108,16 @@ class EmbeddingMetrics:
             stats["indexing_errors"] += errors
 
             if stats["files_indexed"] > 0:
-                stats["average_indexing_time"] = stats["total_indexing_time"] / stats["files_indexed"]
+                stats["average_indexing_time"] = (
+                    stats["total_indexing_time"] / stats["files_indexed"]
+                )
 
             # Update file types
             if file_types:
                 for ext, count in file_types.items():
-                    self.metrics["file_types"][ext] = self.metrics["file_types"].get(ext, 0) + count
+                    self.metrics["file_types"][ext] = (
+                        self.metrics["file_types"].get(ext, 0) + count
+                    )
 
             # Update daily stats
             today = datetime.now().strftime("%Y-%m-%d")
@@ -124,7 +126,7 @@ class EmbeddingMetrics:
                     "operations": 0,
                     "files_processed": 0,
                     "duration": 0.0,
-                    "errors": 0
+                    "errors": 0,
                 }
 
             daily = self.metrics["daily_stats"][today]
@@ -135,15 +137,19 @@ class EmbeddingMetrics:
 
             self._save_metrics()
 
-            logger.info("indexing_metrics_recorded",
-                       operation_type=operation_type,
-                       files_processed=files_processed,
-                       duration=duration)
+            logger.info(
+                "indexing_metrics_recorded",
+                operation_type=operation_type,
+                files_processed=files_processed,
+                duration=duration,
+            )
 
         except Exception as e:
             logger.error("indexing_metrics_record_failed", error=str(e))
 
-    def record_search_operation(self, query: str, results_count: int, duration: float, success: bool = True):
+    def record_search_operation(
+        self, query: str, results_count: int, duration: float, success: bool = True
+    ):
         """
         Record a search operation.
 
@@ -160,7 +166,9 @@ class EmbeddingMetrics:
             stats["total_search_time"] += duration
 
             if stats["total_searches"] > 0:
-                stats["average_search_time"] = stats["total_search_time"] / stats["total_searches"]
+                stats["average_search_time"] = (
+                    stats["total_search_time"] / stats["total_searches"]
+                )
 
             if not success:
                 stats["failed_searches"] += 1
@@ -171,7 +179,7 @@ class EmbeddingMetrics:
                 self.metrics["daily_stats"][today] = {
                     "searches": 0,
                     "search_duration": 0.0,
-                    "search_errors": 0
+                    "search_errors": 0,
                 }
 
             daily = self.metrics["daily_stats"][today]
@@ -182,16 +190,20 @@ class EmbeddingMetrics:
 
             self._save_metrics()
 
-            logger.info("search_metrics_recorded",
-                       query_length=len(query),
-                       results_count=results_count,
-                       duration=duration,
-                       success=success)
+            logger.info(
+                "search_metrics_recorded",
+                query_length=len(query),
+                results_count=results_count,
+                duration=duration,
+                success=success,
+            )
 
         except Exception as e:
             logger.error("search_metrics_record_failed", error=str(e))
 
-    def update_document_count(self, total_chunks: int, file_types: Optional[Dict[str, int]] = None):
+    def update_document_count(
+        self, total_chunks: int, file_types: Optional[Dict[str, int]] = None
+    ):
         """
         Update document count information.
 
@@ -217,45 +229,58 @@ class EmbeddingMetrics:
         Returns:
             Health check results
         """
-        health_info = {
-            "status": "healthy",
-            "issues": [],
-            "warnings": [],
-            "metrics": {}
-        }
+        health_info = {"status": "healthy", "issues": [], "warnings": [], "metrics": {}}
 
         try:
             # Check if metrics are recent
             last_updated = self.metrics.get("last_updated")
             if last_updated:
                 last_update_time = datetime.fromisoformat(last_updated)
-                hours_since_update = (datetime.now() - last_update_time).total_seconds() / 3600
+                hours_since_update = (
+                    datetime.now() - last_update_time
+                ).total_seconds() / 3600
 
                 if hours_since_update > 24:
-                    health_info["warnings"].append(f"Metrics not updated for {hours_since_update:.1f} hours")
+                    health_info["warnings"].append(
+                        f"Metrics not updated for {hours_since_update:.1f} hours"
+                    )
 
             # Check error rates
             indexing_stats = self.metrics.get("indexing_stats", {})
             search_stats = self.metrics.get("search_stats", {})
 
             if indexing_stats.get("files_indexed", 0) > 0:
-                error_rate = indexing_stats.get("indexing_errors", 0) / indexing_stats["files_indexed"]
+                error_rate = (
+                    indexing_stats.get("indexing_errors", 0)
+                    / indexing_stats["files_indexed"]
+                )
                 if error_rate > 0.1:  # 10% error rate
-                    health_info["issues"].append(f"High indexing error rate: {error_rate:.1%}")
+                    health_info["issues"].append(
+                        f"High indexing error rate: {error_rate:.1%}"
+                    )
 
             if search_stats.get("total_searches", 0) > 0:
-                search_error_rate = search_stats.get("failed_searches", 0) / search_stats["total_searches"]
+                search_error_rate = (
+                    search_stats.get("failed_searches", 0)
+                    / search_stats["total_searches"]
+                )
                 if search_error_rate > 0.05:  # 5% error rate
-                    health_info["issues"].append(f"High search error rate: {search_error_rate:.1%}")
+                    health_info["issues"].append(
+                        f"High search error rate: {search_error_rate:.1%}"
+                    )
 
             # Check performance
             avg_indexing_time = indexing_stats.get("average_indexing_time", 0)
             if avg_indexing_time > 5.0:  # 5 seconds per file
-                health_info["warnings"].append(f"Slow indexing performance: {avg_indexing_time:.1f}s per file")
+                health_info["warnings"].append(
+                    f"Slow indexing performance: {avg_indexing_time:.1f}s per file"
+                )
 
             avg_search_time = search_stats.get("average_search_time", 0)
             if avg_search_time > 2.0:  # 2 seconds per search
-                health_info["warnings"].append(f"Slow search performance: {avg_search_time:.1f}s per search")
+                health_info["warnings"].append(
+                    f"Slow search performance: {avg_search_time:.1f}s per search"
+                )
 
             # Check document count
             total_chunks = self.metrics.get("total_chunks", 0)
@@ -276,7 +301,7 @@ class EmbeddingMetrics:
                 "total_files_indexed": indexing_stats.get("files_indexed", 0),
                 "total_searches": search_stats.get("total_searches", 0),
                 "average_indexing_time": avg_indexing_time,
-                "average_search_time": avg_search_time
+                "average_search_time": avg_search_time,
             }
 
             # Update health in metrics
@@ -284,7 +309,7 @@ class EmbeddingMetrics:
                 "status": health_info["status"],
                 "last_health_check": datetime.now().isoformat(),
                 "issues": health_info["issues"],
-                "warnings": health_info["warnings"]
+                "warnings": health_info["warnings"],
             }
 
             self._save_metrics()
@@ -310,7 +335,9 @@ class EmbeddingMetrics:
                 if date >= seven_days_ago:
                     recent_stats["indexing"] += daily_stats.get("files_processed", 0)
                     recent_stats["searching"] += daily_stats.get("searches", 0)
-                    recent_stats["errors"] += daily_stats.get("errors", 0) + daily_stats.get("search_errors", 0)
+                    recent_stats["errors"] += daily_stats.get(
+                        "errors", 0
+                    ) + daily_stats.get("search_errors", 0)
 
             return {
                 "workspace": self.metrics["workspace"],
@@ -319,24 +346,41 @@ class EmbeddingMetrics:
                 "health": health["status"],
                 "documents": {
                     "total_chunks": self.metrics.get("total_chunks", 0),
-                    "file_types": dict(sorted(self.metrics.get("file_types", {}).items(),
-                                             key=lambda x: x[1], reverse=True)[:10])
+                    "file_types": dict(
+                        sorted(
+                            self.metrics.get("file_types", {}).items(),
+                            key=lambda x: x[1],
+                            reverse=True,
+                        )[:10]
+                    ),
                 },
                 "performance": {
                     "indexing": {
-                        "files_indexed": self.metrics["indexing_stats"]["files_indexed"],
-                        "average_time": self.metrics["indexing_stats"]["average_indexing_time"],
-                        "total_time": self.metrics["indexing_stats"]["total_indexing_time"]
+                        "files_indexed": self.metrics["indexing_stats"][
+                            "files_indexed"
+                        ],
+                        "average_time": self.metrics["indexing_stats"][
+                            "average_indexing_time"
+                        ],
+                        "total_time": self.metrics["indexing_stats"][
+                            "total_indexing_time"
+                        ],
                     },
                     "searching": {
-                        "total_searches": self.metrics["search_stats"]["total_searches"],
-                        "average_time": self.metrics["search_stats"]["average_search_time"],
-                        "failed_searches": self.metrics["search_stats"]["failed_searches"]
-                    }
+                        "total_searches": self.metrics["search_stats"][
+                            "total_searches"
+                        ],
+                        "average_time": self.metrics["search_stats"][
+                            "average_search_time"
+                        ],
+                        "failed_searches": self.metrics["search_stats"][
+                            "failed_searches"
+                        ],
+                    },
                 },
                 "recent_activity": recent_stats,
                 "issues": health["issues"],
-                "warnings": health["warnings"]
+                "warnings": health["warnings"],
             }
 
         except Exception as e:

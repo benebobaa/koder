@@ -12,16 +12,25 @@ from koder.config.settings import EmbeddingsSettings
 class GoogleEmbeddings(Embeddings):
     """Google Gemini Text Embeddings wrapper for LangChain."""
 
-    def __init__(self, api_key: str, model: str = "models/text-embedding-004"):
+    def __init__(
+        self,
+        api_key: str,
+        model: str = "models/text-embedding-004",
+        dimension: Optional[int] = None
+    ):
         """
         Initialize Google embeddings.
 
         Args:
             api_key: Google API key
             model: Embedding model name
+            dimension: Optional output dimensionality (e.g., 768, 512)
+                      If specified, reduces embedding size for cost savings.
+                      Only supported by models like text-embedding-004.
         """
         genai.configure(api_key=api_key)
         self.model = model
+        self.dimension = dimension
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         """
@@ -33,11 +42,17 @@ class GoogleEmbeddings(Embeddings):
         Returns:
             List of embedding vectors
         """
-        result = genai.embed_content(
-            model=self.model,
-            content=texts,
-            task_type="retrieval_document",
-        )
+        kwargs = {
+            "model": self.model,
+            "content": texts,
+            "task_type": "retrieval_document",
+        }
+
+        # Add output_dimensionality if specified
+        if self.dimension is not None:
+            kwargs["output_dimensionality"] = self.dimension
+
+        result = genai.embed_content(**kwargs)
         return result["embedding"]
 
     def embed_query(self, text: str) -> list[float]:
@@ -50,11 +65,17 @@ class GoogleEmbeddings(Embeddings):
         Returns:
             Embedding vector
         """
-        result = genai.embed_content(
-            model=self.model,
-            content=text,
-            task_type="retrieval_query",
-        )
+        kwargs = {
+            "model": self.model,
+            "content": text,
+            "task_type": "retrieval_query",
+        }
+
+        # Add output_dimensionality if specified
+        if self.dimension is not None:
+            kwargs["output_dimensionality"] = self.dimension
+
+        result = genai.embed_content(**kwargs)
         return result["embedding"]
 
 
@@ -84,6 +105,7 @@ def create_embeddings(
         return GoogleEmbeddings(
             api_key=settings.google_api_key,
             model=settings.model,
+            dimension=settings.dimension if settings.dimension != 768 else None,
         )
 
     elif provider == "local":
