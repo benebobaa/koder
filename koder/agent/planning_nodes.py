@@ -30,7 +30,7 @@ def complexity_analysis_node(
     state: AgentState, llm: BaseChatModel, tools: list[BaseTool]
 ) -> dict[str, Any]:
     """
-    Analyze task complexity to determine execution mode.
+    Analyze task complexity to determine execution mode - now enhanced with discovery results.
 
     Args:
         state: Current agent state
@@ -57,10 +57,24 @@ def complexity_analysis_node(
     # Build tool list
     tool_names = [tool.name for tool in tools]
 
-    # Create analysis prompt
+    # Enhanced context with discovery results
+    context = ""
+    if state.get("discovery_results"):
+        discovery = state["discovery_results"]
+        context = f"""
+
+**Discovery Results:**
+- Project Type: {discovery.get('project_type', 'unknown')}
+- Tech Stack: {', '.join(discovery.get('tech_stack', {}).get('frameworks', []))}
+- Key Files: {len(discovery.get('key_files', []))} configuration files found
+- User Intent: {discovery.get('user_intent_understanding', {}).get('clarified_intent', request)}
+- Complexity Factors: {json.dumps(discovery.get('complexity_factors', {}), indent=2)}
+"""
+
+    # Create enhanced analysis prompt
     prompt = COMPLEXITY_ANALYSIS_PROMPT.format(
         request=request, tools=", ".join(tool_names)
-    )
+    ) + context
 
     # Use fast LLM for quick analysis
     messages = [SystemMessage(content=prompt)]
@@ -110,15 +124,49 @@ def plan_generation_node(
     """
     request = state["current_task"]
 
-    # Gather context
+    # Gather enhanced context with discovery results
     context = f"Workspace: {state['workspace_path']}\n"
+
+    # Add discovery results if available
+    if state.get("discovery_results"):
+        discovery = state["discovery_results"]
+        # Format discovery data safely for prompt inclusion
+        tech_stack = discovery.get('tech_stack', {})
+        frameworks = ', '.join(tech_stack.get('frameworks', [])) if tech_stack.get('frameworks') else 'None'
+        primary_lang = tech_stack.get('primary_language', 'unknown')
+
+        context += f"""
+
+## Project Discovery Results
+**Project Type:** {discovery.get('project_type', 'unknown')}
+**Primary Language:** {primary_lang}
+**Frameworks:** {frameworks}
+**Key Directories:** {len(discovery.get('main_directories', []))} main directories identified
+**Dependencies Found:** {len(discovery.get('dependencies', {}))} dependency files
+**Relevant Patterns:** {len(discovery.get('relevant_patterns', []))} patterns identified
+**User Intent Clarified:** {'Yes' if discovery.get('user_intent_understanding', {}).get('questions_asked') else 'No'}
+"""
+
     if state.get("gathered_files"):
-        context += f"Files read: {', '.join(state['gathered_files'])}\n"
+        context += f"\n**Files already read:** {', '.join(state['gathered_files'])}\n"
     if state.get("codebase_summary"):
-        context += f"Codebase: {state['codebase_summary']}\n"
+        context += f"\n**Previous codebase analysis:** {state['codebase_summary']}\n"
 
     # Build tool list with descriptions
     tool_descriptions = [f"- {tool.name}: {tool.description}" for tool in tools]
+
+    # Add explicit project type context at the very beginning of context
+    if state.get("discovery_results"):
+        discovery = state["discovery_results"]
+        project_type = discovery.get('project_type', 'unknown')
+        tech_stack = discovery.get('tech_stack', {})
+        primary_lang = tech_stack.get('primary_language', 'unknown')
+
+        # Prepend critical project type information
+        context = f"""🎯 **CRITICAL PROJECT TYPE: {project_type.upper()}** 🎯
+🎯 **PRIMARY LANGUAGE: {primary_lang.upper()}** 🎯
+
+{context}"""
 
     # Create planning prompt
     prompt = PLANNING_PROMPT.format(
@@ -186,6 +234,17 @@ def plan_generation_node(
                 if "step_index" not in todo:
                     todo["step_index"] = i
 
+        # Apply language-specific tool enforcement if discovery results available
+        if state.get("discovery_results"):
+            print(f"🔧 Applying language-specific tool enforcement for {state['discovery_results'].get('project_type', 'unknown')} project...")
+            original_plan_tools = [step.get('tool', '') for step in plan.get('steps', [])]
+            plan = _enforce_language_specific_tools(plan, state["discovery_results"])
+            corrected_plan_tools = [step.get('tool', '') for step in plan.get('steps', [])]
+            if original_plan_tools != corrected_plan_tools:
+                print(f"✅ Tools corrected: {original_plan_tools} -> {corrected_plan_tools}")
+            else:
+                print(f"ℹ️  No tool corrections needed")
+
         return {
             "plan": plan,
             "plan_status": "pending",
@@ -194,6 +253,37 @@ def plan_generation_node(
         }
 
     except (json.JSONDecodeError, ValueError) as e:
+        # Fallback: create simple plan with proper structure
+        print(f"⚠️  Failed to parse structured plan: {e}")
+        print("⚠️  Attempting to fix with language-specific tool enforcement...")
+
+        # Try to extract and fix the plan even if JSON parsing failed
+        try:
+            # Extract JSON from the response content
+            content = response.content.strip()
+
+            # Look for JSON pattern in the content
+            json_start = content.find('{')
+            json_end = content.rfind('}') + 1
+
+            if json_start != -1 and json_end > json_start:
+                json_str = content[json_start:json_end]
+                extracted_plan = json.loads(json_str)
+
+                # Apply language-specific corrections if discovery results available
+                if state.get("discovery_results"):
+                    extracted_plan = _enforce_language_specific_tools(extracted_plan, state["discovery_results"])
+
+                extracted_plan["created_at"] = datetime.now().isoformat()
+
+                return {
+                    "plan": extracted_plan,
+                    "plan_status": "pending",
+                    "plan_created_at": extracted_plan["created_at"],
+                    "todos": extracted_plan["todos"],
+                }
+        except Exception as fix_error:
+            print(f"⚠️  Could not fix plan: {fix_error}")
         # Fallback: create simple plan with proper structure
         fallback_plan = {
             "analysis": f"Failed to generate structured plan for: {request}. Will execute directly.",
@@ -231,6 +321,71 @@ def plan_generation_node(
             "plan_created_at": fallback_plan["created_at"],
             "todos": fallback_plan["todos"],
         }
+
+
+def _enforce_language_specific_tools(plan: dict, discovery_results: dict) -> dict:
+    """
+    Enforce correct tool selection based on discovery results.
+
+    This fixes the issue where LLM ignores discovery context and uses wrong tools.
+    """
+    if not discovery_results:
+        return plan
+
+    project_type = discovery_results.get('project_type', 'unknown')
+    tech_stack = discovery_results.get('tech_stack', {})
+    primary_lang = tech_stack.get('primary_language', 'unknown')
+
+    # Create mapping of wrong tools to correct tools
+    tool_corrections = {}
+
+    if primary_lang == 'go':
+        tool_corrections = {
+            'parse_python_code': 'parse_go_code',
+            'ParsePythonTool': 'ParseGoTool'
+        }
+    elif primary_lang == 'python':
+        tool_corrections = {
+            'parse_go_code': 'parse_python_code',
+            'ParseGoTool': 'ParsePythonTool'
+        }
+
+    # Fix steps
+    if 'steps' in plan and isinstance(plan['steps'], list):
+        for step in plan['steps']:
+            if 'tool' in step and step['tool'] in tool_corrections:
+                old_tool = step['tool']
+                step['tool'] = tool_corrections[old_tool]
+                # Update description to reflect correct language
+                if old_tool == 'parse_python_code' and primary_lang == 'go':
+                    step['description'] = step['description'].replace('Python', 'Go')
+                    step['description'] = step['description'].replace('.py', '.go')
+                elif old_tool == 'parse_go_code' and primary_lang == 'python':
+                    step['description'] = step['description'].replace('Go', 'Python')
+                    step['description'] = step['description'].replace('.go', '.py')
+
+    # Fix file patterns
+    if primary_lang == 'go':
+        # Replace .py patterns with .go patterns
+        for step in plan.get('steps', []):
+            if 'file' in step and '**/*.py' in step['file']:
+                step['file'] = step['file'].replace('**/*.py', '**/*.go')
+    elif primary_lang == 'python':
+        # Replace .go patterns with .py patterns
+        for step in plan.get('steps', []):
+            if 'file' in step and '**/*.go' in step['file']:
+                step['file'] = step['file'].replace('**/*.go', '**/*.py')
+
+    # Fix analysis text
+    if 'analysis' in plan:
+        if primary_lang == 'go':
+            plan['analysis'] = plan['analysis'].replace('Python project', 'Go project')
+            plan['analysis'] = plan['analysis'].replace('Python-specific tools', 'Go-specific tools')
+        elif primary_lang == 'python':
+            plan['analysis'] = plan['analysis'].replace('Go project', 'Python project')
+            plan['analysis'] = plan['analysis'].replace('Go-specific tools', 'Python-specific tools')
+
+    return plan
 
 
 def plan_approval_node(state: AgentState) -> dict[str, Any]:

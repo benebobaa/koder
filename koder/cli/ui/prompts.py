@@ -92,3 +92,65 @@ def confirm(prompt: str = "Continue?") -> bool:
             return response in ["y", "yes", "true", "1"]
         except:
             return False
+
+
+def ask(prompt: str, options: list[str] = None) -> str:
+    """
+    Ask for user input with optional choices.
+
+    Args:
+        prompt: Input prompt
+        options: Optional list of valid choices
+
+    Returns:
+        User input string
+    """
+    import sys
+
+    # Check if we're in an interactive terminal
+    if not sys.stdin.isatty():
+        # Non-interactive mode: read from stdin if available
+        try:
+            line = sys.stdin.readline().strip()
+            if options and line not in options:
+                return options[0] if options else line  # Default to first option
+            return line
+        except:
+            # If no input available, default to first option or empty
+            return options[0] if options else ""
+
+    try:
+        # Create a simple prompt session
+        session = create_session()
+
+        # Add options to prompt if provided
+        if options:
+            prompt += f" ({'/'.join(options)})"
+
+        response = session.prompt(prompt + ": ")
+        response = response.strip()
+
+        # Validate against options if provided
+        if options and response not in options:
+            print(f"Invalid choice. Please choose from: {', '.join(options)}")
+            return ask(prompt, options)  # Recursively ask again
+
+        return response
+
+    except (KeyboardInterrupt, EOFError):
+        return ""
+    except Exception:
+        # Fallback to basic input
+        try:
+            if options:
+                prompt += f" ({'/'.join(options)})"
+            response = input(prompt + ": ").strip()
+
+            # Validate against options if provided
+            if options and response not in options:
+                print(f"Invalid choice. Please choose from: {', '.join(options)}")
+                return ask(prompt, options)  # Recursively ask again
+
+            return response
+        except:
+            return ""

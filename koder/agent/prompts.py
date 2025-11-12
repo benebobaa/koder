@@ -41,44 +41,51 @@ PLANNING_PROMPT = """You are creating a detailed execution plan for a complex ta
 **User Request:**
 {request}
 
-**Workspace Context:**
+**Project Context from Discovery:**
 {context}
 
 **Available Tools:**
 {tools}
 
-Create a structured plan with these components:
+**IMPORTANT INSTRUCTIONS:**
+1. **CRITICAL**: Look at the project type and primary language shown above in 🎯 markers
+2. **CRITICAL**: Only use ParsePythonTool if primary language is PYTHON
+3. **CRITICAL**: Only use ParseGoTool if primary language is GO
+4. **CRITICAL**: Do NOT mention "Python project" if the primary language is GO
+5. **CRITICAL**: Do NOT use ParsePythonTool for Go projects
+6. For other languages: Use general tools like ReadFileTool to examine code
+7. Always use language-appropriate file extensions
+8. Your analysis MUST start with: "This is a [LANGUAGE] project, so I'll..."
 
-1. **Analysis**: What needs to be done and why
-2. **Steps**: Numbered steps with tool usage
-3. **Files**: What files will be read/created/modified
-4. **Dependencies**: What depends on what
-5. **Risks**: Potential issues or edge cases
+**Plan Requirements:**
+- Tailor approach to the specific project type discovered
+- Use appropriate tools for the detected language
+- Use correct file extensions for the project type
 
 Respond with JSON:
 {{
-  "analysis": "High-level approach and reasoning",
+  "analysis": "Approach based on the discovered project type",
   "steps": [
     {{
       "step_number": 1,
       "description": "What to do",
       "tool": "tool_name",
       "type": "read" | "write",
-      "file": "path/to/file.py",
+      "file": "path/to/file.ext",
       "rationale": "Why this step"
     }}
   ],
   "todos": [
     {{
       "id": 1,
-      "content": "Task description (imperative form)",
-      "activeForm": "Task description (present continuous)",
+      "content": "Task description",
+      "activeForm": "Working on task",
       "step_index": 1,
       "estimated_time": "30s"
     }}
   ],
-  "files_to_create": ["file1.py", "file2.py"],
-  "files_to_modify": ["existing.py"],
+  "files_to_create": ["file1.ext", "file2.ext"],
+  "files_to_modify": ["existing.ext"],
   "estimated_complexity": "low" | "medium" | "high",
   "estimated_time": "2 minutes",
   "risks": ["Risk 1", "Risk 2"]
@@ -162,3 +169,61 @@ Format the plan in a clear, readable way:
 """
 
 COMPLEXITY_THRESHOLD = 3  # Number of steps that triggers planning mode
+
+# Discovery prompts for pre-planning phase
+DISCOVERY_ANALYSIS_PROMPT = """You are analyzing a user's request and project context to prepare for effective planning.
+
+**User Request:**
+{request}
+
+**Project Discovery Results:**
+{discovery_results}
+
+**Available Tools:**
+{tools}
+
+Based on the discovery results, provide insights on:
+1. How the project structure affects the approach
+2. What existing patterns or technologies should be considered
+3. Any potential challenges or opportunities
+4. Recommended strategy based on project context
+
+Respond with a concise analysis that will help create a better execution plan."""
+
+DISCOVERY_PROJECT_ANALYSIS_PROMPT = """Analyze this project structure and provide insights:
+
+**Project Information:**
+{project_info}
+
+**Technology Stack:**
+{tech_stack}
+
+**User Request Context:**
+{request}
+
+Provide analysis on:
+1. Project type and architecture
+2. Key technologies and frameworks
+3. Existing patterns that are relevant
+4. Potential integration points
+5. Development approach that fits this project
+
+Keep the analysis focused and actionable for planning purposes."""
+
+DISCOVERY_INTENT_CLARIFICATION_PROMPT = """Help clarify user intent for this request:
+
+**Original Request:**
+{request}
+
+**Project Context:**
+{project_context}
+
+**What we know so far:**
+{current_understanding}
+
+Generate 2-3 specific clarification questions that would help:
+1. Understand the exact outcome desired
+2. Identify any constraints or requirements
+3. Determine the appropriate scope and approach
+
+Make questions specific to this project context and request type."""
