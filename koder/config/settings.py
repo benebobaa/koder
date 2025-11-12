@@ -8,13 +8,15 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class LLMSettings(BaseSettings):
     """LLM provider configuration."""
 
-    provider: Literal["anthropic", "openai", "deepseek"] = "anthropic"
+    provider: Literal["anthropic", "openai", "deepseek", "moonshot"] = "anthropic"
     anthropic_api_key: str = Field(default="", alias="ANTHROPIC_API_KEY")
     openai_api_key: str = Field(default="", alias="OPENAI_API_KEY")
     deepseek_api_key: str = Field(default="", alias="DEEPSEEK_API_KEY")
+    moonshot_api_key: str = Field(default="", alias="MOONSHOT_API_KEY")
     anthropic_model: str = "claude-sonnet-4-5-20250929"
     openai_model: str = "gpt-4-turbo-preview"
     deepseek_model: str = "deepseek-chat"
+    moonshot_model: str = "moonshot-v1-8k"
     temperature: float = 0.7
     max_tokens: int = 4096
 
@@ -187,7 +189,7 @@ class Settings(BaseSettings):
     max_iterations: int = 10
     timeout_seconds: int = 300
     recursion_limit: int = Field(
-        default=100, description="Maximum recursion depth for LangGraph execution"
+        default=250, description="Maximum recursion depth for LangGraph execution"
     )
 
 

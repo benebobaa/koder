@@ -80,10 +80,22 @@ def info():
 
     settings = get_settings()
 
+    # Get the correct model based on provider
+    if settings.llm.provider == "anthropic":
+        model = settings.llm.anthropic_model
+    elif settings.llm.provider == "openai":
+        model = settings.llm.openai_model
+    elif settings.llm.provider == "deepseek":
+        model = settings.llm.deepseek_model
+    elif settings.llm.provider == "moonshot":
+        model = settings.llm.moonshot_model
+    else:
+        model = "unknown"
+
     info_text = f"""
 [bold]Configuration:[/bold]
   LLM Provider: {settings.llm.provider}
-  Model: {settings.llm.anthropic_model if settings.llm.provider == "anthropic" else settings.llm.openai_model}
+  Model: {model}
   Temperature: {settings.llm.temperature}
   Max Tokens: {settings.llm.max_tokens}
 
