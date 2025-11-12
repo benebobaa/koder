@@ -48,8 +48,8 @@ def get_checkpoint_config(
     config = {
         "configurable": {
             "thread_id": thread_id,
-            "recursion_limit": recursion_limit,
-        }
+        },
+        "recursion_limit": recursion_limit,
     }
 
     if checkpoint_ns:
