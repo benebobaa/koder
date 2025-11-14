@@ -23,13 +23,12 @@ MODEL_CONTEXT_WINDOWS = {
     MOONSHOT_V1_8K: 8_192,
     MOONSHOT_V1_32K: 32_768,
     MOONSHOT_V1_128K: 131_072,
-
     # K2 Models
-    KIMI_K2_0711_PREVIEW: 131_072,      # Context length 128k
-    KIMI_K2_0905_PREVIEW: 262_144,      # Context length 256k
-    KIMI_K2_TURBO_PREVIEW: 262_144,     # Context length 256k, high-speed
-    KIMI_K2_THINKING: 262_144,          # Context length 256k, reasoning model
-    KIMI_K2_THINKING_TURBO: 262_144,    # Context length 256k, thinking + high-speed
+    KIMI_K2_0711_PREVIEW: 131_072,  # Context length 128k
+    KIMI_K2_0905_PREVIEW: 262_144,  # Context length 256k
+    KIMI_K2_TURBO_PREVIEW: 262_144,  # Context length 256k, high-speed
+    KIMI_K2_THINKING: 262_144,  # Context length 256k, reasoning model
+    KIMI_K2_THINKING_TURBO: 262_144,  # Context length 256k, thinking + high-speed
 }
 
 MODEL_MAX_OUTPUT_TOKENS = {
@@ -37,7 +36,6 @@ MODEL_MAX_OUTPUT_TOKENS = {
     MOONSHOT_V1_8K: 8_192,
     MOONSHOT_V1_32K: 32_768,
     MOONSHOT_V1_128K: 65_536,
-
     # K2 Models
     KIMI_K2_0711_PREVIEW: 65_536,
     KIMI_K2_0905_PREVIEW: 65_536,
