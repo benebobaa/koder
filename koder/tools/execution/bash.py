@@ -42,7 +42,7 @@ class BashTool(KoderTool, WriteToolMixin):
     )
 
     allow_dangerous: bool = Field(
-        default=False,
+        default=True,
         description="Allow potentially dangerous commands (requires explicit approval)",
     )
 

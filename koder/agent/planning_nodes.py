@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Any
 
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_core.tools import BaseTool
 
 from koder.agent.prompts import (
@@ -14,6 +14,7 @@ from koder.agent.prompts import (
     PLAN_EXECUTION_PROMPT,
     PLANNING_PROMPT,
     REFLECTION_PROMPT,
+    STEP_VERIFICATION_PROMPT,
 )
 from koder.agent.state import AgentState
 from koder.cli.ui.formatters import (
@@ -57,24 +58,10 @@ def complexity_analysis_node(
     # Build tool list
     tool_names = [tool.name for tool in tools]
 
-    # Enhanced context with discovery results
-    context = ""
-    if state.get("discovery_results"):
-        discovery = state["discovery_results"]
-        context = f"""
-
-**Discovery Results:**
-- Project Type: {discovery.get('project_type', 'unknown')}
-- Tech Stack: {', '.join(discovery.get('tech_stack', {}).get('frameworks', []))}
-- Key Files: {len(discovery.get('key_files', []))} configuration files found
-- User Intent: {discovery.get('user_intent_understanding', {}).get('clarified_intent', request)}
-- Complexity Factors: {json.dumps(discovery.get('complexity_factors', {}), indent=2)}
-"""
-
-    # Create enhanced analysis prompt
+    # Create analysis prompt
     prompt = COMPLEXITY_ANALYSIS_PROMPT.format(
         request=request, tools=", ".join(tool_names)
-    ) + context
+    )
 
     # Use fast LLM for quick analysis
     messages = [SystemMessage(content=prompt)]
@@ -124,28 +111,8 @@ def plan_generation_node(
     """
     request = state["current_task"]
 
-    # Gather enhanced context with discovery results
+    # Gather context
     context = f"Workspace: {state['workspace_path']}\n"
-
-    # Add discovery results if available
-    if state.get("discovery_results"):
-        discovery = state["discovery_results"]
-        # Format discovery data safely for prompt inclusion
-        tech_stack = discovery.get('tech_stack', {})
-        frameworks = ', '.join(tech_stack.get('frameworks', [])) if tech_stack.get('frameworks') else 'None'
-        primary_lang = tech_stack.get('primary_language', 'unknown')
-
-        context += f"""
-
-## Project Discovery Results
-**Project Type:** {discovery.get('project_type', 'unknown')}
-**Primary Language:** {primary_lang}
-**Frameworks:** {frameworks}
-**Key Directories:** {len(discovery.get('main_directories', []))} main directories identified
-**Dependencies Found:** {len(discovery.get('dependencies', {}))} dependency files
-**Relevant Patterns:** {len(discovery.get('relevant_patterns', []))} patterns identified
-**User Intent Clarified:** {'Yes' if discovery.get('user_intent_understanding', {}).get('questions_asked') else 'No'}
-"""
 
     if state.get("gathered_files"):
         context += f"\n**Files already read:** {', '.join(state['gathered_files'])}\n"
@@ -154,19 +121,6 @@ def plan_generation_node(
 
     # Build tool list with descriptions
     tool_descriptions = [f"- {tool.name}: {tool.description}" for tool in tools]
-
-    # Add explicit project type context at the very beginning of context
-    if state.get("discovery_results"):
-        discovery = state["discovery_results"]
-        project_type = discovery.get('project_type', 'unknown')
-        tech_stack = discovery.get('tech_stack', {})
-        primary_lang = tech_stack.get('primary_language', 'unknown')
-
-        # Prepend critical project type information
-        context = f"""🎯 **CRITICAL PROJECT TYPE: {project_type.upper()}** 🎯
-🎯 **PRIMARY LANGUAGE: {primary_lang.upper()}** 🎯
-
-{context}"""
 
     # Create planning prompt
     prompt = PLANNING_PROMPT.format(
@@ -234,17 +188,6 @@ def plan_generation_node(
                 if "step_index" not in todo:
                     todo["step_index"] = i
 
-        # Apply language-specific tool enforcement if discovery results available
-        if state.get("discovery_results"):
-            print(f"🔧 Applying language-specific tool enforcement for {state['discovery_results'].get('project_type', 'unknown')} project...")
-            original_plan_tools = [step.get('tool', '') for step in plan.get('steps', [])]
-            plan = _enforce_language_specific_tools(plan, state["discovery_results"])
-            corrected_plan_tools = [step.get('tool', '') for step in plan.get('steps', [])]
-            if original_plan_tools != corrected_plan_tools:
-                print(f"✅ Tools corrected: {original_plan_tools} -> {corrected_plan_tools}")
-            else:
-                print(f"ℹ️  No tool corrections needed")
-
         return {
             "plan": plan,
             "plan_status": "pending",
@@ -255,9 +198,9 @@ def plan_generation_node(
     except (json.JSONDecodeError, ValueError) as e:
         # Fallback: create simple plan with proper structure
         print(f"⚠️  Failed to parse structured plan: {e}")
-        print("⚠️  Attempting to fix with language-specific tool enforcement...")
+        print("⚠️  Creating fallback plan...")
 
-        # Try to extract and fix the plan even if JSON parsing failed
+        # Try to extract the plan even if JSON parsing failed
         try:
             # Extract JSON from the response content
             content = response.content.strip()
@@ -269,11 +212,6 @@ def plan_generation_node(
             if json_start != -1 and json_end > json_start:
                 json_str = content[json_start:json_end]
                 extracted_plan = json.loads(json_str)
-
-                # Apply language-specific corrections if discovery results available
-                if state.get("discovery_results"):
-                    extracted_plan = _enforce_language_specific_tools(extracted_plan, state["discovery_results"])
-
                 extracted_plan["created_at"] = datetime.now().isoformat()
 
                 return {
@@ -321,71 +259,6 @@ def plan_generation_node(
             "plan_created_at": fallback_plan["created_at"],
             "todos": fallback_plan["todos"],
         }
-
-
-def _enforce_language_specific_tools(plan: dict, discovery_results: dict) -> dict:
-    """
-    Enforce correct tool selection based on discovery results.
-
-    This fixes the issue where LLM ignores discovery context and uses wrong tools.
-    """
-    if not discovery_results:
-        return plan
-
-    project_type = discovery_results.get('project_type', 'unknown')
-    tech_stack = discovery_results.get('tech_stack', {})
-    primary_lang = tech_stack.get('primary_language', 'unknown')
-
-    # Create mapping of wrong tools to correct tools
-    tool_corrections = {}
-
-    if primary_lang == 'go':
-        tool_corrections = {
-            'parse_python_code': 'parse_go_code',
-            'ParsePythonTool': 'ParseGoTool'
-        }
-    elif primary_lang == 'python':
-        tool_corrections = {
-            'parse_go_code': 'parse_python_code',
-            'ParseGoTool': 'ParsePythonTool'
-        }
-
-    # Fix steps
-    if 'steps' in plan and isinstance(plan['steps'], list):
-        for step in plan['steps']:
-            if 'tool' in step and step['tool'] in tool_corrections:
-                old_tool = step['tool']
-                step['tool'] = tool_corrections[old_tool]
-                # Update description to reflect correct language
-                if old_tool == 'parse_python_code' and primary_lang == 'go':
-                    step['description'] = step['description'].replace('Python', 'Go')
-                    step['description'] = step['description'].replace('.py', '.go')
-                elif old_tool == 'parse_go_code' and primary_lang == 'python':
-                    step['description'] = step['description'].replace('Go', 'Python')
-                    step['description'] = step['description'].replace('.go', '.py')
-
-    # Fix file patterns
-    if primary_lang == 'go':
-        # Replace .py patterns with .go patterns
-        for step in plan.get('steps', []):
-            if 'file' in step and '**/*.py' in step['file']:
-                step['file'] = step['file'].replace('**/*.py', '**/*.go')
-    elif primary_lang == 'python':
-        # Replace .go patterns with .py patterns
-        for step in plan.get('steps', []):
-            if 'file' in step and '**/*.go' in step['file']:
-                step['file'] = step['file'].replace('**/*.go', '**/*.py')
-
-    # Fix analysis text
-    if 'analysis' in plan:
-        if primary_lang == 'go':
-            plan['analysis'] = plan['analysis'].replace('Python project', 'Go project')
-            plan['analysis'] = plan['analysis'].replace('Python-specific tools', 'Go-specific tools')
-        elif primary_lang == 'python':
-            plan['analysis'] = plan['analysis'].replace('Go project', 'Python project')
-            plan['analysis'] = plan['analysis'].replace('Go-specific tools', 'Python-specific tools')
-
-    return plan
 
 
 def plan_approval_node(state: AgentState) -> dict[str, Any]:
@@ -465,6 +338,11 @@ def plan_execution_node(
     elif current_step_idx >= total_steps:
         current_step_idx = 0  # Reset if out of bounds
 
+    # Keep track of all messages across steps to preserve context
+    all_messages = list(state.get("messages", []))
+    failed_steps = []
+    blocked_steps = []
+
     # Execute remaining steps
     for i in range(current_step_idx, total_steps):
         step = steps[i]
@@ -480,25 +358,65 @@ def plan_execution_node(
         # Show step header
         format_step_header(step_number, total_steps, description)
 
-        # Execute step
+        # Execute step with ReAct loop
         try:
-            # Execute step using LLM with tools (this handles both specified tools and LLM-determined tools)
-            result = _execute_step_with_llm(state, llm, tools, step, i)
+            # Pass updated state with accumulated messages
+            execution_state = dict(state)
+            execution_state["messages"] = all_messages
+
+            result_dict = _execute_step_with_llm(execution_state, llm, tools, step, i)
+
+            # Extract results
+            status = result_dict.get("status", "completed")
+            summary = result_dict.get("summary", "")
+            actions_taken = result_dict.get("actions_taken", [])
+            new_messages = result_dict.get("messages", [])
+
+            # Add new messages to accumulated history
+            all_messages.extend(new_messages)
 
             # Store result in tool outputs for reflection
             step_result = {
                 "step_number": step_number,
                 "description": description,
                 "tool_name": tool_name,
-                "result": result,
-                "status": "completed",
+                "result": summary,
+                "status": status,
+                "actions_taken": actions_taken,
             }
 
-            # Mark TODO as completed
-            if i < len(todos):
-                todos[i]["status"] = "completed"
+            # Update TODO and tracking based on verification status
+            if status == "completed":
+                if i < len(todos):
+                    todos[i]["status"] = "completed"
+                completed_steps.append(i)
+            elif status == "blocked":
+                if i < len(todos):
+                    todos[i]["status"] = "failed"
+                blocked_steps.append(i)
+                # Stop execution on blocked step - requires user intervention
+                state.setdefault("tool_outputs", []).append(step_result)
+                state["messages"] = all_messages
 
-            completed_steps.append(i)
+                from koder.cli.ui.console import console
+                console.print(f"\n⚠️  Step {step_number} is blocked: {summary}", style="yellow")
+                console.print("This step requires user intervention or external dependencies.", style="yellow")
+
+                return {
+                    "error": f"Step {step_number} blocked: {summary}",
+                    "current_step": i,
+                    "completed_steps": completed_steps,
+                    "failed_steps": failed_steps,
+                    "blocked_steps": blocked_steps,
+                    "todos": todos,
+                    "tool_outputs": state.get("tool_outputs", []),
+                    "messages": all_messages,
+                }
+            elif status in ["failed", "partial"]:
+                if i < len(todos):
+                    todos[i]["status"] = "failed"
+                failed_steps.append(i)
+                # Continue with other steps but track failure
 
             # Update state with tool output
             state.setdefault("tool_outputs", []).append(step_result)
@@ -508,7 +426,7 @@ def plan_execution_node(
             if i < len(todos):
                 todos[i]["status"] = "failed"
 
-            error_result = f"Step {step_number} failed: {str(e)}"
+            error_result = f"Step {step_number} failed with exception: {str(e)}"
             step_result = {
                 "step_number": step_number,
                 "description": description,
@@ -517,27 +435,49 @@ def plan_execution_node(
                 "status": "failed",
             }
 
+            failed_steps.append(i)
             state.setdefault("tool_outputs", []).append(step_result)
+            state["messages"] = all_messages
 
-            return {
-                "error": error_result,
-                "current_step": i,
-                "completed_steps": completed_steps,
-                "failed_steps": [i],
-                "todos": todos,
-                "tool_outputs": state.get("tool_outputs", []),
-            }
+            from koder.cli.ui.console import console
+            console.print(f"\n❌ Step {step_number} failed with exception: {str(e)}", style="red")
+
+            # Decide whether to continue or stop based on error severity
+            if "blocked" in str(e).lower() or "cannot proceed" in str(e).lower():
+                return {
+                    "error": error_result,
+                    "current_step": i,
+                    "completed_steps": completed_steps,
+                    "failed_steps": failed_steps,
+                    "blocked_steps": blocked_steps,
+                    "todos": todos,
+                    "tool_outputs": state.get("tool_outputs", []),
+                    "messages": all_messages,
+                }
+            # Otherwise continue with next steps
 
     # All steps completed
     format_todo_list(todos, title="Completed")
 
+    # Update state with accumulated messages
+    state["messages"] = all_messages
+
+    # Determine overall status
+    if failed_steps or blocked_steps:
+        plan_status = "completed_with_issues"
+    else:
+        plan_status = "completed"
+
     return {
-        "plan_status": "completed",
+        "plan_status": plan_status,
         "current_step": total_steps,
         "completed_steps": completed_steps,
+        "failed_steps": failed_steps,
+        "blocked_steps": blocked_steps,
         "todos": todos,
         "should_continue": False,
         "tool_outputs": state.get("tool_outputs", []),
+        "messages": all_messages,
     }
 
 
@@ -547,9 +487,12 @@ def _execute_step_with_llm(
     tools: list[BaseTool],
     step: dict,
     step_index: int,
-) -> str:
+) -> dict[str, Any]:
     """
-    Execute a plan step using LLM with tools.
+    Execute a plan step using LLM with ReAct loop.
+
+    This implements the same reasoning-action-observation pattern as non-planning mode,
+    allowing the LLM to iterate until the step objective is achieved.
 
     Args:
         state: Current agent state
@@ -559,7 +502,7 @@ def _execute_step_with_llm(
         step_index: Index of current step
 
     Returns:
-        Execution result string
+        Dict with execution results, status, and messages
     """
     from koder.cli.ui.console import console
     from rich.panel import Panel
@@ -570,62 +513,173 @@ def _execute_step_with_llm(
         for i in range(step_index)
     ]
 
-    prompt = PLAN_EXECUTION_PROMPT.format(
+    # Build step context prompt
+    step_description = step.get("description", "")
+    suggested_tool = step.get("tool", "any appropriate tool")
+
+    step_prompt = PLAN_EXECUTION_PROMPT.format(
         step_number=step.get("step_number", step_index + 1),
         total_steps=len(plan.get("steps", [])),
-        plan_context=json.dumps(plan, indent=2),
+        step_description=step_description,
+        plan_context=json.dumps(plan.get("analysis", ""), indent=2)[:500],  # Truncate to avoid token limits
         current_step=json.dumps(step, indent=2),
-        previous_results=json.dumps(previous_results, indent=2),
+        previous_results=json.dumps(previous_results[-3:], indent=2) if previous_results else "None",  # Last 3 results
+        suggested_tool=suggested_tool,
     )
 
-    messages = [SystemMessage(content=prompt)]
+    # Start with full message history from state (preserve context)
+    messages = list(state.get("messages", []))
 
-    # Bind tools and invoke
+    # Add step context as system message
+    messages.append(SystemMessage(content=step_prompt))
+
+    # ReAct loop: reasoning -> action -> observation -> repeat
+    tool_lookup = {tool.name: tool for tool in tools}
     llm_with_tools = llm.bind_tools(tools)
-    response = llm_with_tools.invoke(messages)
 
-    # Execute tool calls if any
-    if hasattr(response, "tool_calls") and response.tool_calls:
-        tool_lookup = {tool.name: tool for tool in tools}
-        results = []
+    max_iterations = 5  # Prevent infinite loops
+    iteration = 0
+    actions_taken = []
 
+    while iteration < max_iterations:
+        iteration += 1
+
+        # Reasoning: LLM decides what to do
+        response = llm_with_tools.invoke(messages)
+        messages.append(response)
+
+        # Check if LLM wants to use tools (Action phase)
+        if not hasattr(response, "tool_calls") or not response.tool_calls:
+            # No more tool calls - LLM is done reasoning for this step
+            break
+
+        # Execute tools and observe results
+        tool_messages = []
         for tool_call in response.tool_calls:
             tool_name = tool_call.get("name")
             tool_args = tool_call.get("args", {})
 
-            if tool_name in tool_lookup:
-                tool = tool_lookup[tool_name]
+            # Display tool being used
+            console.print(f"🔧 Using tool: {tool_name}")
 
-                # Display tool being used
-                console.print(f"🔧 Using tool: {tool_name}")
+            if tool_name not in tool_lookup:
+                result = f"Error: Tool '{tool_name}' not found"
+            else:
+                try:
+                    tool = tool_lookup[tool_name]
+                    result = tool.invoke(tool_args)
+                    actions_taken.append({
+                        "tool": tool_name,
+                        "args": tool_args,
+                        "result": str(result)[:200]  # Truncate for summary
+                    })
+                except Exception as e:
+                    result = f"Error executing tool: {str(e)}"
 
-                # Execute tool
-                result = tool.invoke(tool_args)
-                results.append(result)
+            # Display tool result
+            result_str = str(result)
+            if len(result_str) > 300:
+                result_str = result_str[:300] + "..."
 
-                # Display tool result
-                if hasattr(result, "__len__") and len(str(result)) > 300:
-                    # Truncate long results
-                    result_str = str(result)[:300] + "..."
-                else:
-                    result_str = str(result)
-
-                console.print(
-                    Panel(
-                        result_str,
-                        title=f"Tool Result: {tool_name}",
-                        border_style="blue",
-                    )
+            console.print(
+                Panel(
+                    result_str,
+                    title=f"Tool Result: {tool_name}",
+                    border_style="blue",
                 )
+            )
 
-        return " | ".join(str(r) for r in results) if results else response.content
+            # Add tool result to messages (Observation phase)
+            tool_message = ToolMessage(
+                content=str(result),
+                tool_call_id=tool_call.get("id", ""),
+            )
+            tool_messages.append(tool_message)
 
-    return response.content
+        # Add all tool messages to conversation
+        messages.extend(tool_messages)
+
+        # Loop continues - LLM will see tool results and reason about next action
+
+    # After ReAct loop completes, verify if step objective was achieved
+    verification_status = _verify_step_completion(
+        llm=llm,
+        step_description=step_description,
+        actions_taken=actions_taken,
+        final_response=response.content if hasattr(response, "content") else "",
+    )
+
+    # Extract final summary from LLM's last response
+    final_summary = response.content if hasattr(response, "content") else "Step executed"
+
+    return {
+        "status": verification_status,
+        "summary": final_summary,
+        "actions_taken": actions_taken,
+        "messages": messages[len(state.get("messages", [])):],  # Return only new messages
+        "iterations": iteration,
+    }
+
+
+def _verify_step_completion(
+    llm: BaseChatModel,
+    step_description: str,
+    actions_taken: list[dict],
+    final_response: str,
+) -> str:
+    """
+    Verify if a step's objective was actually achieved.
+
+    Args:
+        llm: Language model
+        step_description: The step's objective description
+        actions_taken: List of actions/tools used
+        final_response: The LLM's final response
+
+    Returns:
+        Status: "completed", "partial", "failed", or "blocked"
+    """
+    if not actions_taken:
+        # No actions taken - check if step was deemed unnecessary
+        if "not needed" in final_response.lower() or "already" in final_response.lower():
+            return "completed"
+        return "failed"
+
+    # Build actions summary
+    actions_summary = "\n".join([
+        f"- Used {action['tool']} with args {action['args']}: {action['result'][:100]}"
+        for action in actions_taken
+    ])
+
+    # Ask LLM to verify completion
+    verification_prompt = STEP_VERIFICATION_PROMPT.format(
+        step_description=step_description,
+        actions_summary=actions_summary,
+    )
+
+    try:
+        verification_response = llm.invoke([SystemMessage(content=verification_prompt)])
+        response_text = verification_response.content.lower()
+
+        if "completed" in response_text:
+            return "completed"
+        elif "partial" in response_text:
+            return "partial"
+        elif "blocked" in response_text:
+            return "blocked"
+        else:
+            return "failed"
+    except Exception:
+        # If verification fails, assume completed if actions were taken
+        return "completed" if actions_taken else "failed"
 
 
 def reflection_node(state: AgentState, llm: BaseChatModel) -> dict[str, Any]:
     """
-    Reflect on completed execution and provide summary.
+    Reflect on completed execution and provide accurate analysis.
+
+    This node analyzes what was actually accomplished versus what was requested,
+    providing honest feedback about success, failures, and next steps.
 
     Args:
         state: Current agent state
@@ -634,38 +688,99 @@ def reflection_node(state: AgentState, llm: BaseChatModel) -> dict[str, Any]:
     Returns:
         State updates with reflection and final response message
     """
-    from langchain_core.messages import AIMessage
-
     request = state["current_task"]
     plan = state.get("plan", {})
     results = state.get("tool_outputs", [])
-    files_modified = state.get("gathered_files", [])
+    completed_steps = state.get("completed_steps", [])
+    failed_steps = state.get("failed_steps", [])
+    blocked_steps = state.get("blocked_steps", [])
 
-    # Create a summary of what was accomplished
-    summary_parts = []
-    summary_parts.append(f"## Project Analysis Complete ✅")
-    summary_parts.append(f"**Original Request:** {request}")
+    # Build comprehensive context for reflection
+    total_steps = len(results)
+    successful_steps = [r for r in results if r.get("status") == "completed"]
+    failed_step_results = [r for r in results if r.get("status") in ["failed", "partial", "blocked"]]
 
-    if results:
-        summary_parts.append(f"\n### What I Found:")
-        for i, result in enumerate(results):
-            if result.get("status") == "completed":
-                summary_parts.append(
-                    f"**{result.get('description', 'Step ' + str(i + 1))}** ✅"
-                )
-                # Extract key information from tool results
-                tool_result = result.get("result", "")
-                if "Contents of" in str(tool_result) or "Found" in str(tool_result):
-                    summary_parts.append(f"  {str(tool_result)[:200]}...")
+    # Create detailed summary of what happened
+    execution_summary = {
+        "total_steps": total_steps,
+        "completed": len(successful_steps),
+        "failed": len(failed_step_results),
+        "steps_details": []
+    }
 
-    # Create final response
-    final_response = "\n\n".join(summary_parts)
+    for result in results:
+        step_summary = {
+            "description": result.get("description", ""),
+            "status": result.get("status", "unknown"),
+            "summary": result.get("result", "")[:200],
+            "actions": len(result.get("actions_taken", []))
+        }
+        execution_summary["steps_details"].append(step_summary)
+
+    # Use LLM to generate meaningful reflection
+    reflection_prompt = REFLECTION_PROMPT.format(
+        request=request,
+        plan=json.dumps(plan.get("analysis", ""), indent=2)[:300],
+        results=json.dumps(execution_summary, indent=2),
+        files_modified=", ".join(state.get("gathered_files", [])) or "None"
+    )
+
+    try:
+        reflection_response = llm.invoke([SystemMessage(content=reflection_prompt)])
+        reflection_content = reflection_response.content
+    except Exception:
+        # Fallback if LLM reflection fails
+        reflection_content = _create_fallback_reflection(
+            request, successful_steps, failed_step_results, total_steps
+        )
 
     # Create AIMessage for the chat interface
-    ai_message = AIMessage(content=final_response)
+    ai_message = AIMessage(content=reflection_content)
 
     return {
-        "reflection": {"summary": final_response},
+        "reflection": {
+            "summary": reflection_content,
+            "completed_steps": len(successful_steps),
+            "failed_steps": len(failed_step_results),
+            "total_steps": total_steps
+        },
         "should_continue": False,
-        "messages": [ai_message],  # Add the response message for display
+        "messages": [ai_message],
     }
+
+
+def _create_fallback_reflection(
+    request: str,
+    successful_steps: list,
+    failed_steps: list,
+    total_steps: int
+) -> str:
+    """Create a basic reflection when LLM reflection fails."""
+    parts = []
+    parts.append(f"## Task Execution Summary\n")
+    parts.append(f"**Original Request:** {request}\n")
+
+    # Success summary
+    if successful_steps:
+        parts.append(f"\n### ✅ Completed Steps ({len(successful_steps)}/{total_steps}):")
+        for step in successful_steps[:5]:  # Show first 5
+            desc = step.get("description", "Unknown step")
+            parts.append(f"- {desc}")
+
+    # Failure summary
+    if failed_steps:
+        parts.append(f"\n### ❌ Failed/Blocked Steps ({len(failed_steps)}):")
+        for step in failed_steps[:5]:
+            desc = step.get("description", "Unknown step")
+            status = step.get("status", "failed")
+            parts.append(f"- {desc} ({status})")
+
+    # Overall assessment
+    if not failed_steps:
+        parts.append("\n### Assessment\n✅ Task completed successfully!")
+    elif len(successful_steps) > len(failed_steps):
+        parts.append("\n### Assessment\n⚠️ Task partially completed with some issues.")
+    else:
+        parts.append("\n### Assessment\n❌ Task encountered significant issues.")
+
+    return "\n".join(parts)

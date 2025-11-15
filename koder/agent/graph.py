@@ -23,7 +23,6 @@ from koder.agent.nodes import (
     observation_node,
     reasoning_node,
 )
-from koder.agent.discovery_nodes import project_discovery_node
 from koder.agent.planning_nodes import (
     complexity_analysis_node,
     plan_approval_node,
@@ -115,17 +114,16 @@ def create_planning_graph(
     checkpointer: Optional[SqliteSaver] = None,
 ):
     """
-    Create intelligent planning agent graph with Claude Code-style discovery phase.
+    Create intelligent planning agent graph.
 
-    The graph now includes a comprehensive discovery phase before complexity analysis:
-    1. Discovery Phase: Analyze project structure, identify patterns, clarify intent
-    2. Complexity Analysis: Enhanced with discovery results
-    3. Execution Mode: Simple tasks → ReAct loop, Complex tasks → Planning
+    The graph analyzes task complexity and routes accordingly:
+    1. Complexity Analysis: Determine if task is simple or complex
+    2. Execution Mode: Simple tasks → ReAct loop, Complex tasks → Planning
 
-    Enhanced Flow:
-        Entry → Project Discovery → Complexity Analysis (with context)
+    Flow:
+        Entry → Complexity Analysis
                   ├─ [Simple] → Quick Execution (ReAct loop)
-                  └─ [Complex] → Plan Generation (with rich context)
+                  └─ [Complex] → Plan Generation
                                   ↓
                             Plan Approval
                                   ├─ [Approved] → Plan Execution → Reflection
@@ -137,12 +135,11 @@ def create_planning_graph(
         checkpointer: Optional checkpointer for state persistence
 
     Returns:
-        Compiled LangGraph instance with discovery and planning capabilities
+        Compiled LangGraph instance with planning capabilities
     """
     workflow = StateGraph(AgentState)
 
     # Create partial functions
-    discovery_fn = partial(project_discovery_node, llm=llm, tools=tools)
     complexity_fn = partial(complexity_analysis_node, llm=llm, tools=tools)
     plan_gen_fn = partial(plan_generation_node, llm=llm, tools=tools)
     plan_approval_fn = partial(plan_approval_node)
@@ -157,8 +154,7 @@ def create_planning_graph(
 
     # === Add All Nodes ===
 
-    # Discovery and planning nodes
-    workflow.add_node("project_discovery", discovery_fn)
+    # Planning nodes
     workflow.add_node("complexity_analysis", complexity_fn)
     workflow.add_node("plan_generation", plan_gen_fn)
     workflow.add_node("plan_approval", plan_approval_fn)
@@ -171,13 +167,10 @@ def create_planning_graph(
     workflow.add_node("observation", observation_fn)
     workflow.add_node("final_response", final_response_fn)
 
-    # === Define Enhanced Flow ===
+    # === Define Flow ===
 
-    # Entry point: Project discovery
-    workflow.set_entry_point("project_discovery")
-
-    # Discovery → Complexity Analysis
-    workflow.add_edge("project_discovery", "complexity_analysis")
+    # Entry point: Complexity Analysis
+    workflow.set_entry_point("complexity_analysis")
 
     # Route based on complexity
     workflow.add_conditional_edges(

@@ -41,26 +41,22 @@ PLANNING_PROMPT = """You are creating a detailed execution plan for a complex ta
 **User Request:**
 {request}
 
-**Project Context from Discovery:**
+**Project Context:**
 {context}
 
 **Available Tools:**
 {tools}
 
 **IMPORTANT INSTRUCTIONS:**
-1. **CRITICAL**: Look at the project type and primary language shown above in 🎯 markers
-2. **CRITICAL**: Only use ParsePythonTool if primary language is PYTHON
-3. **CRITICAL**: Only use ParseGoTool if primary language is GO
-4. **CRITICAL**: Do NOT mention "Python project" if the primary language is GO
-5. **CRITICAL**: Do NOT use ParsePythonTool for Go projects
-6. For other languages: Use general tools like ReadFileTool to examine code
-7. Always use language-appropriate file extensions
-8. Your analysis MUST start with: "This is a [LANGUAGE] project, so I'll..."
+1. Analyze the project structure from the context provided
+2. Use appropriate tools based on file types and languages detected
+3. Always use correct file extensions for the project
+4. Plan steps in a logical order
 
 **Plan Requirements:**
-- Tailor approach to the specific project type discovered
-- Use appropriate tools for the detected language
-- Use correct file extensions for the project type
+- Tailor approach to the specific project context
+- Use appropriate tools for the detected language/framework
+- Consider dependencies between steps
 
 Respond with JSON:
 {{
@@ -94,27 +90,59 @@ Respond with JSON:
 
 PLAN_EXECUTION_PROMPT = """You are executing step {step_number} of {total_steps} in a plan.
 
-**Plan Context:**
+**Step Objective:** {step_description}
+
+**Plan Context (for reference):**
 {plan_context}
 
-**Current Step:**
+**Current Step Details:**
 {current_step}
 
-**Previous Results:**
+**Previous Step Results:**
 {previous_results}
 
-Execute this step carefully:
-1. Use the specified tool
-2. Handle errors gracefully
-3. Verify the result
-4. Provide clear output
+**Instructions:**
+Your goal is to ACHIEVE THE STEP OBJECTIVE, not just execute tools mechanically.
 
-If you encounter an error:
-- Explain what went wrong
-- Suggest how to fix it
-- Ask for guidance if needed
+The plan suggests using {suggested_tool}, but you should:
+1. **Reason** about what's needed to accomplish this step's objective
+2. **Adapt** your approach if the suggested tool isn't appropriate or if you encounter issues
+3. **Use tools** as many times as needed to accomplish the objective
+4. **Verify** that your actions achieved the intended outcome
+5. **Explain** your reasoning and what you accomplished
 
-Proceed with the execution.
+Treat the plan as GUIDANCE, not rigid commands. If you discover that:
+- The suggested approach won't work (e.g., missing dependencies)
+- A different tool would be better
+- Additional steps are needed
+- The step is already complete or not needed
+
+Then ADAPT your approach accordingly.
+
+**When to stop:**
+- When you have successfully achieved the step objective
+- When you encounter a blocker that requires user intervention
+- When you determine the step is not needed
+
+Think step-by-step and use tools iteratively until the objective is met.
+"""
+
+STEP_VERIFICATION_PROMPT = """Review the work done for this step:
+
+**Step Objective:** {step_description}
+
+**Actions Taken:**
+{actions_summary}
+
+**Question:** Did we successfully achieve the step objective?
+
+Respond with:
+- "COMPLETED" if the objective was fully achieved
+- "PARTIAL" if some progress was made but objective not fully met
+- "FAILED" if the objective was not achieved
+- "BLOCKED" if you cannot proceed due to missing dependencies or requirements
+
+Then explain your assessment in 1-2 sentences.
 """
 
 REFLECTION_PROMPT = """Reflect on the completed task execution.
@@ -169,61 +197,3 @@ Format the plan in a clear, readable way:
 """
 
 COMPLEXITY_THRESHOLD = 3  # Number of steps that triggers planning mode
-
-# Discovery prompts for pre-planning phase
-DISCOVERY_ANALYSIS_PROMPT = """You are analyzing a user's request and project context to prepare for effective planning.
-
-**User Request:**
-{request}
-
-**Project Discovery Results:**
-{discovery_results}
-
-**Available Tools:**
-{tools}
-
-Based on the discovery results, provide insights on:
-1. How the project structure affects the approach
-2. What existing patterns or technologies should be considered
-3. Any potential challenges or opportunities
-4. Recommended strategy based on project context
-
-Respond with a concise analysis that will help create a better execution plan."""
-
-DISCOVERY_PROJECT_ANALYSIS_PROMPT = """Analyze this project structure and provide insights:
-
-**Project Information:**
-{project_info}
-
-**Technology Stack:**
-{tech_stack}
-
-**User Request Context:**
-{request}
-
-Provide analysis on:
-1. Project type and architecture
-2. Key technologies and frameworks
-3. Existing patterns that are relevant
-4. Potential integration points
-5. Development approach that fits this project
-
-Keep the analysis focused and actionable for planning purposes."""
-
-DISCOVERY_INTENT_CLARIFICATION_PROMPT = """Help clarify user intent for this request:
-
-**Original Request:**
-{request}
-
-**Project Context:**
-{project_context}
-
-**What we know so far:**
-{current_understanding}
-
-Generate 2-3 specific clarification questions that would help:
-1. Understand the exact outcome desired
-2. Identify any constraints or requirements
-3. Determine the appropriate scope and approach
-
-Make questions specific to this project context and request type."""

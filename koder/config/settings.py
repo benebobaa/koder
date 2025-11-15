@@ -1,6 +1,7 @@
 """Configuration settings for Koder using Pydantic Settings."""
 
 from typing import Literal, Optional
+
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -16,7 +17,7 @@ class LLMSettings(BaseSettings):
     anthropic_model: str = "claude-sonnet-4-5-20250929"
     openai_model: str = "gpt-4-turbo-preview"
     deepseek_model: str = "deepseek-chat"
-    moonshot_model: str = "moonshot-v1-8k"
+    moonshot_model: str = "kimi-k2-turbo-preview"
     temperature: float = 0.7
     max_tokens: int = 4096
 
@@ -31,8 +32,7 @@ class EmbeddingsSettings(BaseSettings):
 
     # Core settings
     enabled: bool = Field(
-        default=True,
-        description="Enable/disable embedding system entirely"
+        default=True, description="Enable/disable embedding system entirely"
     )
     mode: Literal["off", "lexical", "primary", "reranker"] = Field(
         default="reranker",
@@ -42,7 +42,7 @@ class EmbeddingsSettings(BaseSettings):
             "'lexical' = keyword search only (free), "
             "'primary' = embeddings only (current behavior), "
             "'reranker' = lexical first-pass then embedding re-rank (recommended)"
-        )
+        ),
     )
 
     # API settings
@@ -50,57 +50,46 @@ class EmbeddingsSettings(BaseSettings):
     model: str = "models/text-embedding-004"
     dimension: int = Field(
         default=768,
-        description="Embedding dimensions (768 or 512 for cost savings, 3072 max)"
+        description="Embedding dimensions (768 or 512 for cost savings, 3072 max)",
     )
 
     # Cost controls
     max_monthly_cost_usd: float = Field(
         default=50.0,
-        description="Maximum monthly budget for embedding API calls in USD"
+        description="Maximum monthly budget for embedding API calls in USD",
     )
     max_daily_api_calls: int = Field(
-        default=1000,
-        description="Maximum API calls per day to prevent runaway costs"
+        default=1000, description="Maximum API calls per day to prevent runaway costs"
     )
 
     # Caching
     cache_ttl_hours: int = Field(
-        default=24,
-        description="How long to cache embedding results (hours)"
+        default=24, description="How long to cache embedding results (hours)"
     )
     cache_enabled: bool = Field(
-        default=True,
-        description="Enable persistent caching of embeddings"
+        default=True, description="Enable persistent caching of embeddings"
     )
 
     # File watching
     watch_files: bool = Field(
-        default=True,
-        description="Auto-enable file watching to keep index fresh"
+        default=True, description="Auto-enable file watching to keep index fresh"
     )
     watch_debounce_seconds: int = Field(
-        default=2,
-        description="Debounce delay for file change detection"
+        default=2, description="Debounce delay for file change detection"
     )
 
     # Retrieval settings
     lexical_top_k: int = Field(
-        default=20,
-        description="Number of lexical results for re-ranking mode"
+        default=20, description="Number of lexical results for re-ranking mode"
     )
-    final_top_k: int = Field(
-        default=5,
-        description="Final number of results to return"
-    )
+    final_top_k: int = Field(default=5, description="Final number of results to return")
 
     # A/B testing
     ab_test_enabled: bool = Field(
-        default=False,
-        description="Enable A/B testing to compare retrieval modes"
+        default=False, description="Enable A/B testing to compare retrieval modes"
     )
     ab_test_ratio: float = Field(
-        default=0.5,
-        description="Ratio of tasks using embeddings (0.0-1.0) in A/B test"
+        default=0.5, description="Ratio of tasks using embeddings (0.0-1.0) in A/B test"
     )
 
     model_config = SettingsConfigDict(

@@ -162,7 +162,7 @@ class LLMFactory:
 
     @staticmethod
     def create_moonshot_llm(
-        model: str = "moonshot-v1-8k",
+        model: str = "kimi-k2-turbo-preview",
         temperature: float = 0.7,
         max_tokens: int = 4096,
         api_key: Optional[str] = None,
