@@ -72,6 +72,7 @@ dev = [
     "twine>=5.0.0",
     "types-Pygments>=2.0.0",
     "types-requests>=2.0.0",
+    "pip-licenses>=4.0.0",
 ]
 
 [project.scripts]
