@@ -25,7 +25,7 @@ jobs:
         run: uv python install 3.13
 
       - name: Install dependencies
-        run: uv sync --all-groups --dev
+        run: uv sync --all-extras
 
       - name: Analyze code complexity
         run: |
@@ -88,7 +88,7 @@ jobs:
 
       - name: Check for outdated dependencies
         run: |
-          uv sync --all-groups --dev
+          uv sync --all-extras
           echo "## Outdated Dependencies" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 

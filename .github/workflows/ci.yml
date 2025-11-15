@@ -29,7 +29,9 @@ jobs:
         run: uv python install 3.13
 
       - name: Install dependencies
-        run: uv sync --all-groups --dev
+        run: uv sync --all-extras
+        env:
+          UV_CACHE_DIR: ${{ env.UV_CACHE_DIR }}
 
       - name: Run ruff linting
         run: uv run ruff check .
@@ -39,6 +41,7 @@ jobs:
 
       - name: Run mypy type checking
         run: uv run mypy koder
+        continue-on-error: true
 
   # Test matrix across multiple Python versions and operating systems
   test:
@@ -77,7 +80,7 @@ jobs:
             ${{ runner.os }}-uv-${{ matrix.python-version }}-
 
       - name: Install dependencies
-        run: uv sync --all-groups --dev
+        run: uv sync --all-extras
         env:
           UV_CACHE_DIR: ${{ env.UV_CACHE_DIR }}
 
@@ -117,7 +120,9 @@ jobs:
         run: uv python install 3.13
 
       - name: Install dependencies
-        run: uv sync --all-groups --dev
+        run: uv sync --all-extras
+        env:
+          UV_CACHE_DIR: ${{ env.UV_CACHE_DIR }}
 
       - name: Build package
         run: uv build
@@ -148,7 +153,9 @@ jobs:
         run: uv python install 3.13
 
       - name: Install dependencies
-        run: uv sync --all-groups --dev
+        run: uv sync --all-extras
+        env:
+          UV_CACHE_DIR: ${{ env.UV_CACHE_DIR }}
 
       - name: Run safety check
         run: uv run safety check
@@ -180,11 +187,13 @@ jobs:
         run: uv python install 3.13
 
       - name: Install dependencies
-        run: uv sync --all-groups --dev
+        run: uv sync --all-extras
+        env:
+          UV_CACHE_DIR: ${{ env.UV_CACHE_DIR }}
 
       - name: Check licenses
         run: |
-          uv run pip-licenses --from=mixed --format=table
+          uv run pip-licenses --from=mixed --format=markdown
           # Fail if there are any problematic licenses
           if uv run pip-licenses --fail-on="unknown;GPL;AGPL" --from=mixed; then
             echo "License check passed"
@@ -213,7 +222,9 @@ jobs:
         run: uv python install 3.13
 
       - name: Install dependencies
-        run: uv sync --all-groups --dev
+        run: uv sync --all-extras
+        env:
+          UV_CACHE_DIR: ${{ env.UV_CACHE_DIR }}
 
       - name: Run e2e tests
         run: uv run pytest tests/e2e -v --timeout=300

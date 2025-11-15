@@ -253,8 +253,8 @@ def format_approval_prompt(plan: dict[str, Any], task: str) -> None:
     format_plan(plan)
 
     # Then show approval prompt
-    files_to_modify = len(plan.get('files_to_modify', []))
-    files_to_create = len(plan.get('files_to_create', []))
+    files_to_modify = len(plan.get("files_to_modify", []))
+    files_to_create = len(plan.get("files_to_create", []))
     prompt_text = (
         f"[bold]Task:[/bold] {task}\n\n"
         f"[yellow]⚠️  This plan will modify {files_to_modify} files "

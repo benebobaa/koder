@@ -181,8 +181,7 @@ def final_response_node(state: AgentState, llm: BaseChatModel) -> dict[str, Any]
     messages = state["messages"] + [
         HumanMessage(
             content=(
-                "Please provide your final response based on the "
-                "information gathered."
+                "Please provide your final response based on the information gathered."
             )
         )
     ]
