@@ -4,8 +4,6 @@ import re
 from pathlib import Path
 from typing import Any
 
-from pydantic import Field
-
 from koder.tools.base import ReadOnlyTool
 from koder.tools.registry import registry
 
@@ -34,8 +32,8 @@ class ParseGoTool(ReadOnlyTool):
         try:
             # Check if input is a file path
             file_path = Path(input_text)
-            if file_path.exists() and file_path.suffix == '.go':
-                with open(file_path, 'r', encoding='utf-8') as f:
+            if file_path.exists() and file_path.suffix == ".go":
+                with open(file_path, encoding="utf-8") as f:
                     go_code = f.read()
                 source_info = f"File: {file_path}"
             else:
@@ -63,10 +61,10 @@ class ParseGoTool(ReadOnlyTool):
             "constants": [],
             "variables": [],
             "issues": [],
-            "metrics": {}
+            "metrics": {},
         }
 
-        lines = go_code.split('\n')
+        lines = go_code.split("\n")
         in_multiline_comment = False
         in_import_block = False
         import_block_content = []
@@ -79,28 +77,28 @@ class ParseGoTool(ReadOnlyTool):
                 continue
 
             # Handle multiline comments
-            if '/*' in stripped_line:
+            if "/*" in stripped_line:
                 in_multiline_comment = True
-            if '*/' in stripped_line:
+            if "*/" in stripped_line:
                 in_multiline_comment = False
                 continue
             if in_multiline_comment:
                 continue
 
             # Skip single-line comments
-            if stripped_line.startswith('//'):
+            if stripped_line.startswith("//"):
                 continue
 
             # Package declaration
-            if stripped_line.startswith('package '):
-                analysis["package"] = stripped_line.replace('package ', '').strip()
+            if stripped_line.startswith("package "):
+                analysis["package"] = stripped_line.replace("package ", "").strip()
 
             # Import block handling
-            if stripped_line.startswith('import') and stripped_line.endswith('{'):
+            if stripped_line.startswith("import") and stripped_line.endswith("{"):
                 in_import_block = True
                 continue
             if in_import_block:
-                if stripped_line == '}':
+                if stripped_line == "}":
                     in_import_block = False
                     # Process import block content
                     for import_line in import_block_content:
@@ -114,46 +112,40 @@ class ParseGoTool(ReadOnlyTool):
                     continue
 
             # Single import
-            if stripped_line.startswith('import ') and not in_import_block:
+            if stripped_line.startswith("import ") and not in_import_block:
                 import_match = re.match(r'import\s+["\'](.+)["\']', stripped_line)
                 if import_match:
                     analysis["imports"].append(import_match.group(1))
 
             # Function detection
-            func_match = re.match(r'func\s+(\([^)]+\)\s+)?(\w+)', stripped_line)
+            func_match = re.match(r"func\s+(\([^)]+\)\s+)?(\w+)", stripped_line)
             if func_match:
                 func_name = func_match.group(2)
                 receiver = func_match.group(1) if func_match.group(1) else None
-                analysis["functions"].append({
-                    "name": func_name,
-                    "line": i,
-                    "receiver": receiver
-                })
+                analysis["functions"].append(
+                    {"name": func_name, "line": i, "receiver": receiver}
+                )
 
             # Type detection (struct, interface)
-            type_match = re.match(r'type\s+(\w+)\s+(\w+)', stripped_line)
+            type_match = re.match(r"type\s+(\w+)\s+(\w+)", stripped_line)
             if type_match:
-                analysis["types"].append({
-                    "name": type_match.group(1),
-                    "kind": type_match.group(2),
-                    "line": i
-                })
+                analysis["types"].append(
+                    {
+                        "name": type_match.group(1),
+                        "kind": type_match.group(2),
+                        "line": i,
+                    }
+                )
 
             # Constant detection
-            const_match = re.match(r'const\s+(\w+)', stripped_line)
+            const_match = re.match(r"const\s+(\w+)", stripped_line)
             if const_match:
-                analysis["constants"].append({
-                    "name": const_match.group(1),
-                    "line": i
-                })
+                analysis["constants"].append({"name": const_match.group(1), "line": i})
 
             # Variable detection
-            var_match = re.match(r'var\s+(\w+)', stripped_line)
+            var_match = re.match(r"var\s+(\w+)", stripped_line)
             if var_match:
-                analysis["variables"].append({
-                    "name": var_match.group(1),
-                    "line": i
-                })
+                analysis["variables"].append({"name": var_match.group(1), "line": i})
 
         # Basic issue detection
         self._detect_issues(go_code, analysis)
@@ -161,51 +153,71 @@ class ParseGoTool(ReadOnlyTool):
         # Calculate metrics
         analysis["metrics"] = {
             "total_lines": len(lines),
-            "code_lines": len([l for l in lines if l.strip() and not l.strip().startswith('//')]),
-            "comment_lines": len([l for l in lines if l.strip().startswith('//')]),
+            "code_lines": len(
+                [
+                    line
+                    for line in lines
+                    if line.strip() and not line.strip().startswith("//")
+                ]
+            ),
+            "comment_lines": len(
+                [line for line in lines if line.strip().startswith("//")]
+            ),
             "functions_count": len(analysis["functions"]),
             "imports_count": len(analysis["imports"]),
-            "types_count": len(analysis["types"])
+            "types_count": len(analysis["types"]),
         }
 
         return analysis
 
     def _detect_issues(self, go_code: str, analysis: dict) -> None:
         """Detect potential issues in Go code."""
-        lines = go_code.split('\n')
+        lines = go_code.split("\n")
 
         for i, line in enumerate(lines, 1):
             stripped = line.strip()
 
             # Check for common Go issues
-            if 'fmt.Println(' in stripped and '"' not in stripped and "'" not in stripped:
-                analysis["issues"].append({
-                    "type": "suspicious_print",
-                    "line": i,
-                    "message": "fmt.Println without string literals - might be debugging code"
-                })
+            if (
+                "fmt.Println(" in stripped
+                and '"' not in stripped
+                and "'" not in stripped
+            ):
+                analysis["issues"].append(
+                    {
+                        "type": "suspicious_print",
+                        "line": i,
+                        "message": "fmt.Println without string literals - might be debugging code",
+                    }
+                )
 
             # Check for error handling
-            if re.search(r'[^{]\s+err\s*:?=', stripped) and i < len(lines):
+            if re.search(r"[^{]\s+err\s*:?=", stripped) and i < len(lines):
                 # Look for error checking in next few lines
-                next_lines = lines[i:i+3]
-                if not any('err != nil' in l for l in next_lines):
-                    analysis["issues"].append({
-                        "type": "missing_error_check",
-                        "line": i,
-                        "message": "Error assigned but not checked"
-                    })
+                next_lines = lines[i : i + 3]
+                if not any("err != nil" in line for line in next_lines):
+                    analysis["issues"].append(
+                        {
+                            "type": "missing_error_check",
+                            "line": i,
+                            "message": "Error assigned but not checked",
+                        }
+                    )
 
             # Check for potential nil pointer issues
-            if '.' in stripped and 'nil' not in stripped:
-                parts = stripped.split('.')
-                if len(parts) > 1 and not any(keyword in stripped for keyword in ['if', 'for', 'switch']):
+            if "." in stripped and "nil" not in stripped:
+                parts = stripped.split(".")
+                if len(parts) > 1 and not any(
+                    keyword in stripped for keyword in ["if", "for", "switch"]
+                ):
                     # Simple heuristic for potential nil access
-                    analysis["issues"].append({
-                        "type": "potential_nil_access",
-                        "line": i,
-                        "message": f"Potential nil pointer access: {stripped}"
-                    })
+                    analysis["issues"].append(
+                        {
+                            "type": "potential_nil_access",
+                            "line": i,
+                            "message": f"Potential nil pointer access: {stripped}",
+                        }
+                    )
 
     def _format_analysis(self, analysis: dict) -> str:
         """Format the analysis results."""
@@ -230,22 +242,28 @@ class ParseGoTool(ReadOnlyTool):
         if analysis["functions"]:
             result.append(f"Functions ({len(analysis['functions'])}):")
             for func in analysis["functions"]:
-                receiver_info = f" ({func['receiver']})" if func['receiver'] else ""
-                result.append(f"  - {func['name']}{receiver_info} (line {func['line']})")
+                receiver_info = f" ({func['receiver']})" if func["receiver"] else ""
+                result.append(
+                    f"  - {func['name']}{receiver_info} (line {func['line']})"
+                )
             result.append("")
 
         # Types
         if analysis["types"]:
             result.append(f"Types ({len(analysis['types'])}):")
             for type_info in analysis["types"]:
-                result.append(f"  - {type_info['name']} ({type_info['kind']}) (line {type_info['line']})")
+                result.append(
+                    f"  - {type_info['name']} ({type_info['kind']}) (line {type_info['line']})"
+                )
             result.append("")
 
         # Issues
         if analysis["issues"]:
             result.append(f"Potential Issues Found ({len(analysis['issues'])}):")
             for issue in analysis["issues"]:
-                result.append(f"  ⚠️  {issue['type']} (line {issue['line']}): {issue['message']}")
+                result.append(
+                    f"  ⚠️  {issue['type']} (line {issue['line']}): {issue['message']}"
+                )
             result.append("")
 
         # Metrics
@@ -288,7 +306,7 @@ class GoModAnalysisTool(ReadOnlyTool):
             if not go_mod_path.exists():
                 return f"go.mod file not found at {go_mod_path}"
 
-            with open(go_mod_path, 'r') as f:
+            with open(go_mod_path) as f:
                 content = f.read()
 
             # Parse go.mod
@@ -309,36 +327,35 @@ class GoModAnalysisTool(ReadOnlyTool):
             "go_version": None,
             "dependencies": [],
             "replace": [],
-            "exclude": []
+            "exclude": [],
         }
 
-        lines = content.strip().split('\n')
+        lines = content.strip().split("\n")
         current_section = None
 
         for line in lines:
             line = line.strip()
-            if not line or line.startswith('//'):
+            if not line or line.startswith("//"):
                 continue
 
-            if line.startswith('module '):
-                info['module'] = line.replace('module ', '').strip()
-            elif line.startswith('go '):
-                info['go_version'] = line.replace('go ', '').strip()
-            elif line.startswith('require ('):
-                current_section = 'require'
-            elif line.startswith('replace ('):
-                current_section = 'replace'
-            elif line.startswith('exclude ('):
-                current_section = 'exclude'
-            elif line == ')':
+            if line.startswith("module "):
+                info["module"] = line.replace("module ", "").strip()
+            elif line.startswith("go "):
+                info["go_version"] = line.replace("go ", "").strip()
+            elif line.startswith("require ("):
+                current_section = "require"
+            elif line.startswith("replace ("):
+                current_section = "replace"
+            elif line.startswith("exclude ("):
+                current_section = "exclude"
+            elif line == ")":
                 current_section = None
-            elif current_section == 'require' and line:
+            elif current_section == "require" and line:
                 parts = line.split()
                 if len(parts) >= 2:
-                    info['dependencies'].append({
-                        'module': parts[0],
-                        'version': parts[1]
-                    })
+                    info["dependencies"].append(
+                        {"module": parts[0], "version": parts[1]}
+                    )
 
         return info
 
@@ -351,9 +368,9 @@ class GoModAnalysisTool(ReadOnlyTool):
         result.append(f"File: {info.get('path', 'Unknown')}")
         result.append("")
 
-        if info['dependencies']:
+        if info["dependencies"]:
             result.append(f"Dependencies ({len(info['dependencies'])}):")
-            for dep in info['dependencies']:
+            for dep in info["dependencies"]:
                 result.append(f"  - {dep['module']} {dep['version']}")
         else:
             result.append("No dependencies found")

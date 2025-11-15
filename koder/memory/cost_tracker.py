@@ -3,7 +3,7 @@
 import sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional
+
 import structlog
 
 from koder.config.settings import get_settings
@@ -13,6 +13,7 @@ logger = structlog.get_logger(__name__)
 
 class BudgetExceededError(Exception):
     """Raised when embedding budget is exceeded."""
+
     pass
 
 
@@ -35,7 +36,7 @@ class CostTracker:
     COST_PER_DOCUMENT_USD = 0.00001
     FREE_TIER_DAILY_LIMIT = 1500
 
-    def __init__(self, db_path: Optional[Path] = None):
+    def __init__(self, db_path: Path | None = None):
         """
         Initialize cost tracker.
 
@@ -89,17 +90,14 @@ class CostTracker:
         cost = self.COST_PER_QUERY_USD * num_queries
 
         with sqlite3.connect(self.db_path) as conn:
-            conn.execute("""
+            conn.execute(
+                """
                 INSERT INTO api_calls
                 (timestamp, call_type, num_calls, estimated_cost_usd, mode)
                 VALUES (?, ?, ?, ?, ?)
-            """, (
-                datetime.now().isoformat(),
-                "query",
-                num_queries,
-                cost,
-                mode
-            ))
+            """,
+                (datetime.now().isoformat(), "query", num_queries, cost, mode),
+            )
             conn.commit()
 
         logger.debug(
@@ -107,7 +105,7 @@ class CostTracker:
             call_type="query",
             num_queries=num_queries,
             cost_usd=cost,
-            mode=mode
+            mode=mode,
         )
 
     def record_document_call(self, mode: str = "unknown", num_documents: int = 1):
@@ -121,17 +119,14 @@ class CostTracker:
         cost = self.COST_PER_DOCUMENT_USD * num_documents
 
         with sqlite3.connect(self.db_path) as conn:
-            conn.execute("""
+            conn.execute(
+                """
                 INSERT INTO api_calls
                 (timestamp, call_type, num_calls, estimated_cost_usd, mode)
                 VALUES (?, ?, ?, ?, ?)
-            """, (
-                datetime.now().isoformat(),
-                "document",
-                num_documents,
-                cost,
-                mode
-            ))
+            """,
+                (datetime.now().isoformat(), "document", num_documents, cost, mode),
+            )
             conn.commit()
 
         logger.debug(
@@ -139,7 +134,7 @@ class CostTracker:
             call_type="document",
             num_documents=num_documents,
             cost_usd=cost,
-            mode=mode
+            mode=mode,
         )
 
     def check_budget_before_call(self, num_calls: int = 1) -> bool:
@@ -164,7 +159,7 @@ class CostTracker:
                 "daily_budget_exceeded",
                 daily_calls=daily_calls,
                 max_daily_calls=self.max_daily_calls,
-                attempted_calls=num_calls
+                attempted_calls=num_calls,
             )
             raise BudgetExceededError(
                 f"Daily API call limit exceeded: {daily_calls}/{self.max_daily_calls}. "
@@ -178,10 +173,11 @@ class CostTracker:
                 "monthly_budget_exceeded",
                 monthly_cost_usd=monthly_cost,
                 max_monthly_cost_usd=self.max_monthly_cost,
-                estimated_additional_cost_usd=estimated_additional_cost
+                estimated_additional_cost_usd=estimated_additional_cost,
             )
             raise BudgetExceededError(
-                f"Monthly cost budget exceeded: ${monthly_cost:.2f}/${self.max_monthly_cost:.2f}. "
+                f"Monthly cost budget exceeded: "
+                f"${monthly_cost:.2f}/${self.max_monthly_cost:.2f}. "
                 f"Attempted call would cost ${estimated_additional_cost:.5f}."
             )
 
@@ -191,7 +187,7 @@ class CostTracker:
                 "daily_budget_warning",
                 daily_calls=daily_calls,
                 max_daily_calls=self.max_daily_calls,
-                percent_used=(daily_calls / self.max_daily_calls) * 100
+                percent_used=(daily_calls / self.max_daily_calls) * 100,
             )
 
         if monthly_cost >= self.max_monthly_cost * 0.8:
@@ -199,12 +195,12 @@ class CostTracker:
                 "monthly_budget_warning",
                 monthly_cost_usd=monthly_cost,
                 max_monthly_cost_usd=self.max_monthly_cost,
-                percent_used=(monthly_cost / self.max_monthly_cost) * 100
+                percent_used=(monthly_cost / self.max_monthly_cost) * 100,
             )
 
         return True
 
-    def get_daily_call_count(self, date: Optional[datetime] = None) -> int:
+    def get_daily_call_count(self, date: datetime | None = None) -> int:
         """
         Get total API calls for a specific day.
 
@@ -221,15 +217,20 @@ class CostTracker:
         end_of_day = start_of_day + timedelta(days=1)
 
         with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.execute("""
+            cursor = conn.execute(
+                """
                 SELECT COALESCE(SUM(num_calls), 0)
                 FROM api_calls
                 WHERE timestamp >= ? AND timestamp < ?
-            """, (start_of_day.isoformat(), end_of_day.isoformat()))
+            """,
+                (start_of_day.isoformat(), end_of_day.isoformat()),
+            )
 
             return cursor.fetchone()[0]
 
-    def get_monthly_cost(self, year: Optional[int] = None, month: Optional[int] = None) -> float:
+    def get_monthly_cost(
+        self, year: int | None = None, month: int | None = None
+    ) -> float:
         """
         Get total estimated cost for a specific month.
 
@@ -253,11 +254,14 @@ class CostTracker:
             end_of_month = datetime(year, month + 1, 1)
 
         with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.execute("""
+            cursor = conn.execute(
+                """
                 SELECT COALESCE(SUM(estimated_cost_usd), 0.0)
                 FROM api_calls
                 WHERE timestamp >= ? AND timestamp < ?
-            """, (start_of_month.isoformat(), end_of_month.isoformat()))
+            """,
+                (start_of_month.isoformat(), end_of_month.isoformat()),
+            )
 
             return cursor.fetchone()[0]
 
@@ -275,29 +279,36 @@ class CostTracker:
 
         with sqlite3.connect(self.db_path) as conn:
             # Total calls and cost
-            cursor = conn.execute("""
+            cursor = conn.execute(
+                """
                 SELECT
                     COUNT(*) as total_requests,
                     COALESCE(SUM(num_calls), 0) as total_calls,
                     COALESCE(SUM(estimated_cost_usd), 0.0) as total_cost
                 FROM api_calls
                 WHERE timestamp >= ?
-            """, (cutoff.isoformat(),))
+            """,
+                (cutoff.isoformat(),),
+            )
 
             total_requests, total_calls, total_cost = cursor.fetchone()
 
             # Calls by mode
-            cursor = conn.execute("""
+            cursor = conn.execute(
+                """
                 SELECT mode, COALESCE(SUM(num_calls), 0) as calls
                 FROM api_calls
                 WHERE timestamp >= ?
                 GROUP BY mode
-            """, (cutoff.isoformat(),))
+            """,
+                (cutoff.isoformat(),),
+            )
 
             calls_by_mode = dict(cursor.fetchall())
 
             # Daily breakdown
-            cursor = conn.execute("""
+            cursor = conn.execute(
+                """
                 SELECT
                     DATE(timestamp) as date,
                     COALESCE(SUM(num_calls), 0) as calls,
@@ -306,7 +317,9 @@ class CostTracker:
                 WHERE timestamp >= ?
                 GROUP BY DATE(timestamp)
                 ORDER BY date DESC
-            """, (cutoff.isoformat(),))
+            """,
+                (cutoff.isoformat(),),
+            )
 
             daily_breakdown = [
                 {"date": row[0], "calls": row[1], "cost_usd": row[2]}
@@ -327,7 +340,7 @@ class CostTracker:
                 "max_monthly_cost_usd": self.max_monthly_cost,
                 "today_calls": self.get_daily_call_count(),
                 "month_cost_usd": self.get_monthly_cost(),
-            }
+            },
         }
 
     def reset_stats(self):
@@ -340,7 +353,7 @@ class CostTracker:
 
 
 # Singleton instance
-_cost_tracker: Optional[CostTracker] = None
+_cost_tracker: CostTracker | None = None
 
 
 def get_cost_tracker() -> CostTracker:

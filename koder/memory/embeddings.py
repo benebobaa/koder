@@ -1,7 +1,5 @@
 """Embeddings configuration."""
 
-from typing import Optional
-
 import google.generativeai as genai
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_core.embeddings import Embeddings
@@ -16,7 +14,7 @@ class GoogleEmbeddings(Embeddings):
         self,
         api_key: str,
         model: str = "models/text-embedding-004",
-        dimension: Optional[int] = None
+        dimension: int | None = None,
     ):
         """
         Initialize Google embeddings.
@@ -80,7 +78,7 @@ class GoogleEmbeddings(Embeddings):
 
 
 def create_embeddings(
-    settings: Optional[EmbeddingsSettings] = None,
+    settings: EmbeddingsSettings | None = None,
     provider: str = "google",
 ) -> Embeddings:
     """

@@ -1,14 +1,9 @@
 """Bash command execution tool with safety controls."""
 
 import os
-import shlex
-import signal
 import subprocess
-import tempfile
 import threading
-import time
 from pathlib import Path
-from typing import Any, Optional
 
 from pydantic import Field
 
@@ -74,7 +69,7 @@ class BashTool(KoderTool, WriteToolMixin):
         "apt-get install",
     }
 
-    def _is_dangerous_command(self, command: str) -> tuple[bool, Optional[str]]:
+    def _is_dangerous_command(self, command: str) -> tuple[bool, str | None]:
         """
         Check if a command contains dangerous patterns.
 
@@ -169,7 +164,6 @@ class BashTool(KoderTool, WriteToolMixin):
                 stdout_lines = []
                 stderr_lines = []
                 stdout_size = 0
-                stderr_size = 0
 
                 # Read stdout and stderr concurrently
                 def read_stream(stream, output_lines, size_limit):

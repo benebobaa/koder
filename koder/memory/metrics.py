@@ -1,10 +1,9 @@
 """Embedding metrics and monitoring system."""
 
 import json
-import time
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from koder.config.settings import get_settings
 from koder.observability.logging import get_logger
@@ -32,11 +31,11 @@ class EmbeddingMetrics:
         # Load existing metrics
         self.metrics = self._load_metrics()
 
-    def _load_metrics(self) -> Dict[str, Any]:
+    def _load_metrics(self) -> dict[str, Any]:
         """Load metrics from file."""
         try:
             if self.metrics_file.exists():
-                with open(self.metrics_file, "r") as f:
+                with open(self.metrics_file) as f:
                     return json.load(f)
         except Exception as e:
             logger.error("metrics_load_failed", error=str(e))
@@ -84,7 +83,7 @@ class EmbeddingMetrics:
         files_skipped: int = 0,
         errors: int = 0,
         duration: float = 0.0,
-        file_types: Optional[Dict[str, int]] = None,
+        file_types: dict[str, int] | None = None,
     ):
         """
         Record an indexing operation.
@@ -202,7 +201,7 @@ class EmbeddingMetrics:
             logger.error("search_metrics_record_failed", error=str(e))
 
     def update_document_count(
-        self, total_chunks: int, file_types: Optional[Dict[str, int]] = None
+        self, total_chunks: int, file_types: dict[str, int] | None = None
     ):
         """
         Update document count information.
@@ -222,7 +221,7 @@ class EmbeddingMetrics:
         except Exception as e:
             logger.error("document_count_update_failed", error=str(e))
 
-    def check_health(self) -> Dict[str, Any]:
+    def check_health(self) -> dict[str, Any]:
         """
         Perform health check of embedding system.
 
@@ -321,7 +320,7 @@ class EmbeddingMetrics:
 
         return health_info
 
-    def get_summary(self) -> Dict[str, Any]:
+    def get_summary(self) -> dict[str, Any]:
         """Get comprehensive metrics summary."""
         try:
             # Perform health check
@@ -396,7 +395,7 @@ class EmbeddingMetrics:
 
 
 # Global metrics instances
-_metrics_instances: Dict[str, EmbeddingMetrics] = {}
+_metrics_instances: dict[str, EmbeddingMetrics] = {}
 
 
 def get_metrics(workspace_path: str) -> EmbeddingMetrics:

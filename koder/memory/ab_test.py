@@ -11,7 +11,8 @@ import hashlib
 import sqlite3
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Literal, Dict
+from typing import Literal
+
 import structlog
 
 from koder.config.settings import get_settings
@@ -30,7 +31,7 @@ class ABTestManager:
     - Comparison reports
     """
 
-    def __init__(self, db_path: Optional[Path] = None):
+    def __init__(self, db_path: Path | None = None):
         """
         Initialize A/B test manager.
 
@@ -88,10 +89,7 @@ class ABTestManager:
 
             conn.commit()
 
-    def get_variant(
-        self,
-        task_id: str
-    ) -> Literal["control", "treatment"]:
+    def get_variant(self, task_id: str) -> Literal["control", "treatment"]:
         """
         Deterministically assign task to control or treatment variant.
 
@@ -107,7 +105,9 @@ class ABTestManager:
             'control' or 'treatment'
         """
         # Hash task_id to get consistent assignment
-        hash_value = int(hashlib.md5(task_id.encode()).hexdigest(), 16)
+        hash_value = int(
+            hashlib.md5(task_id.encode(), usedforsecurity=False).hexdigest(), 16
+        )
         normalized = (hash_value % 1000) / 1000.0  # Value between 0 and 1
 
         # Assign based on ratio threshold
@@ -117,9 +117,7 @@ class ABTestManager:
             return "control"  # No embeddings (or baseline)
 
     def get_mode_for_variant(
-        self,
-        variant: Literal["control", "treatment"],
-        default_mode: str = "reranker"
+        self, variant: Literal["control", "treatment"], default_mode: str = "reranker"
     ) -> str:
         """
         Get retrieval mode for a given variant.
@@ -145,11 +143,11 @@ class ABTestManager:
         mode: str,
         success: bool,
         duration_seconds: float,
-        task_description: Optional[str] = None,
+        task_description: str | None = None,
         context_provided: bool = False,
-        context_helpful: Optional[bool] = None,
+        context_helpful: bool | None = None,
         error_occurred: bool = False,
-        error_message: Optional[str] = None,
+        error_message: str | None = None,
     ):
         """
         Record A/B test result for analysis.
@@ -167,25 +165,28 @@ class ABTestManager:
             error_message: Error message if applicable
         """
         with sqlite3.connect(self.db_path) as conn:
-            conn.execute("""
+            conn.execute(
+                """
                 INSERT INTO ab_test_results
                 (timestamp, task_id, variant, mode, task_description,
                  success, duration_seconds, context_provided, context_helpful,
                  error_occurred, error_message)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                datetime.now().isoformat(),
-                task_id,
-                variant,
-                mode,
-                task_description,
-                success,
-                duration_seconds,
-                context_provided,
-                context_helpful,
-                error_occurred,
-                error_message
-            ))
+            """,
+                (
+                    datetime.now().isoformat(),
+                    task_id,
+                    variant,
+                    mode,
+                    task_description,
+                    success,
+                    duration_seconds,
+                    context_provided,
+                    context_helpful,
+                    error_occurred,
+                    error_message,
+                ),
+            )
             conn.commit()
 
         logger.debug(
@@ -193,10 +194,10 @@ class ABTestManager:
             task_id=task_id,
             variant=variant,
             mode=mode,
-            success=success
+            success=success,
         )
 
-    def get_summary_stats(self, days: int = 7) -> Dict:
+    def get_summary_stats(self, days: int = 7) -> dict:
         """
         Get summary statistics for A/B test.
 
@@ -211,19 +212,26 @@ class ABTestManager:
 
         with sqlite3.connect(self.db_path) as conn:
             # Overall stats by variant
-            cursor = conn.execute("""
+            cursor = conn.execute(
+                """
                 SELECT
                     variant,
                     COUNT(*) as total_tasks,
-                    SUM(CASE WHEN success THEN 1 ELSE 0 END) as successful_tasks,
+                    SUM(CASE WHEN success THEN 1 ELSE 0 END)
+                        as successful_tasks,
                     AVG(duration_seconds) as avg_duration,
-                    SUM(CASE WHEN context_provided THEN 1 ELSE 0 END) as context_provided_count,
-                    SUM(CASE WHEN context_helpful THEN 1 ELSE 0 END) as context_helpful_count,
-                    SUM(CASE WHEN error_occurred THEN 1 ELSE 0 END) as error_count
+                    SUM(CASE WHEN context_provided THEN 1 ELSE 0 END)
+                        as context_provided_count,
+                    SUM(CASE WHEN context_helpful THEN 1 ELSE 0 END)
+                        as context_helpful_count,
+                    SUM(CASE WHEN error_occurred THEN 1 ELSE 0 END)
+                        as error_count
                 FROM ab_test_results
                 WHERE timestamp >= ?
                 GROUP BY variant
-            """, (cutoff_iso,))
+            """,
+                (cutoff_iso,),
+            )
 
             variant_stats = {}
             for row in cursor.fetchall():
@@ -238,11 +246,12 @@ class ABTestManager:
                     "context_provided": row[4],
                     "context_helpful": row[5],
                     "error_count": row[6],
-                    "error_rate": row[6] / max(total, 1)
+                    "error_rate": row[6] / max(total, 1),
                 }
 
             # Stats by mode
-            cursor = conn.execute("""
+            cursor = conn.execute(
+                """
                 SELECT
                     mode,
                     COUNT(*) as total_tasks,
@@ -251,7 +260,9 @@ class ABTestManager:
                 FROM ab_test_results
                 WHERE timestamp >= ?
                 GROUP BY mode
-            """, (cutoff_iso,))
+            """,
+                (cutoff_iso,),
+            )
 
             mode_stats = {}
             for row in cursor.fetchall():
@@ -262,7 +273,7 @@ class ABTestManager:
                     "total_tasks": total,
                     "successful_tasks": successful,
                     "success_rate": successful / max(total, 1),
-                    "avg_duration_seconds": row[3]
+                    "avg_duration_seconds": row[3],
                 }
 
         return {
@@ -270,7 +281,7 @@ class ABTestManager:
             "variant_stats": variant_stats,
             "mode_stats": mode_stats,
             "enabled": self.enabled,
-            "ratio": self.ratio
+            "ratio": self.ratio,
         }
 
     def generate_comparison_report(self, days: int = 7) -> str:
@@ -285,11 +296,7 @@ class ABTestManager:
         """
         stats = self.get_summary_stats(days)
 
-        lines = [
-            f"A/B Test Comparison Report ({days} days)",
-            "=" * 50,
-            ""
-        ]
+        lines = [f"A/B Test Comparison Report ({days} days)", "=" * 50, ""]
 
         if not self.enabled:
             lines.append("⚠️  A/B testing is currently DISABLED")
@@ -319,7 +326,10 @@ class ABTestManager:
             lines.append(f"  Avg duration: {mstats['avg_duration_seconds']:.2f}s")
 
         # Calculate uplift (if both variants exist)
-        if "control" in stats["variant_stats"] and "treatment" in stats["variant_stats"]:
+        if (
+            "control" in stats["variant_stats"]
+            and "treatment" in stats["variant_stats"]
+        ):
             control = stats["variant_stats"]["control"]
             treatment = stats["variant_stats"]["treatment"]
 
@@ -364,7 +374,7 @@ class ABTestManager:
 
 
 # Singleton instance
-_ab_test_manager: Optional[ABTestManager] = None
+_ab_test_manager: ABTestManager | None = None
 
 
 def get_ab_test_manager() -> ABTestManager:

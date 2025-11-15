@@ -1,7 +1,6 @@
 """Main agent graph definition."""
 
 from functools import partial
-from typing import Optional
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import BaseTool
@@ -10,11 +9,8 @@ from langgraph.graph import END, StateGraph
 
 from koder.agent.edges import (
     check_plan_approval,
-    has_more_steps,
     route_by_complexity,
-    should_analyze_complexity,
     should_continue_routing,
-    should_generate_plan,
     should_observe,
 )
 from koder.agent.nodes import (
@@ -36,7 +32,7 @@ from koder.agent.state import AgentState
 def create_agent_graph(
     llm: BaseChatModel,
     tools: list[BaseTool],
-    checkpointer: Optional[SqliteSaver] = None,
+    checkpointer: SqliteSaver | None = None,
 ):
     """
     Create the ReAct agent graph.
@@ -111,7 +107,7 @@ def create_agent_graph(
 def create_planning_graph(
     llm: BaseChatModel,
     tools: list[BaseTool],
-    checkpointer: Optional[SqliteSaver] = None,
+    checkpointer: SqliteSaver | None = None,
 ):
     """
     Create intelligent planning agent graph.
@@ -245,7 +241,8 @@ def create_agent(
         llm: Language model instance
         tools: List of available tools
         checkpointer: Optional checkpointer instance for persistence
-        mode: Execution mode - "auto" (default, planning graph), "simple" (basic ReAct), "planning" (explicit planning)
+        mode: Execution mode - "auto" (default, planning graph),
+            "simple" (basic ReAct), "planning" (explicit planning)
 
     Returns:
         Compiled agent graph

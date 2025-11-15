@@ -1,7 +1,7 @@
 """Base tool classes and utilities."""
 
 from abc import ABC
-from typing import Any, Optional
+from typing import Any
 
 from langchain_core.tools import BaseTool as LangChainBaseTool
 from pydantic import Field
@@ -50,7 +50,7 @@ class ReadOnlyTool(KoderTool, ABC):
 class WriteToolMixin:
     """Mixin for tools that modify filesystem or state."""
 
-    def validate_write_path(self, path: str, workspace: Optional[str] = None) -> bool:
+    def validate_write_path(self, path: str, workspace: str | None = None) -> bool:
         """
         Validate that a path is within the workspace.
 

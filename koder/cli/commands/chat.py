@@ -1,7 +1,6 @@
 """Chat command for interactive sessions."""
 
 import uuid
-from typing import Optional
 
 import typer
 from langchain_core.messages import HumanMessage
@@ -30,13 +29,13 @@ logger = get_logger(__name__)
 
 @app.command()
 def start(
-    thread_id: Optional[str] = typer.Option(
+    thread_id: str | None = typer.Option(
         None,
         "--thread",
         "-t",
         help="Thread ID for session (creates new if not provided)",
     ),
-    provider: Optional[str] = typer.Option(
+    provider: str | None = typer.Option(
         None,
         "--provider",
         "-p",

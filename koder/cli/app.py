@@ -1,10 +1,9 @@
 """Main CLI application."""
 
-from typing import Optional
-
 import typer
 from rich.panel import Panel
 
+from koder.cli.commands import chat, embedding, task
 from koder.cli.ui.console import console
 from koder.config.loader import load_env_file
 from koder.observability.logging import configure_logging
@@ -16,9 +15,6 @@ app = typer.Typer(
     add_completion=True,
     rich_markup_mode="rich",
 )
-
-# Register command modules
-from koder.cli.commands import chat, task, embedding
 
 app.add_typer(chat.app, name="chat", help="Interactive chat mode")
 app.add_typer(task.app, name="task", help="Execute one-off tasks")
@@ -39,7 +35,7 @@ def main(
         "-q",
         help="Suppress non-error output",
     ),
-    env_file: Optional[str] = typer.Option(
+    env_file: str | None = typer.Option(
         None,
         "--env-file",
         "-e",
@@ -64,7 +60,7 @@ def version():
     """Show version information."""
     console.print(
         Panel(
-            "[bold cyan]Koder[/bold cyan] v0.1.0\n"
+            "[bold cyan]Koder[/bold cyan] v1.0.0\n"
             "AI-powered code assistant\n"
             "Built with LangGraph and LangChain",
             title="Version",

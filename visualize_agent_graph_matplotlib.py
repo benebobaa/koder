@@ -11,10 +11,10 @@ Usage:
     python visualize_agent_graph_matplotlib.py
 """
 
+import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import networkx as nx
 from matplotlib.patches import FancyBboxPatch
-import matplotlib.patches as mpatches
 
 
 def create_simple_react_graph():

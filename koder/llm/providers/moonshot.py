@@ -1,7 +1,6 @@
 """Kimi Moonshot provider configuration."""
 
 import os
-from typing import Optional
 
 from langchain_openai import ChatOpenAI
 
@@ -49,7 +48,7 @@ def create_moonshot_llm(
     model: str = MOONSHOT_V1_8K,
     temperature: float = 0.7,
     max_tokens: int = 4096,
-    api_key: Optional[str] = None,
+    api_key: str | None = None,
 ) -> ChatOpenAI:
     """
     Create a Kimi Moonshot LLM instance using OpenAI-compatible API.

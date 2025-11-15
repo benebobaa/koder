@@ -1,7 +1,5 @@
 """Git status tools."""
 
-from pathlib import Path
-
 from git import Repo
 from git.exc import InvalidGitRepositoryError
 

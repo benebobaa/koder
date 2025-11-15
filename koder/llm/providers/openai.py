@@ -1,7 +1,5 @@
 """OpenAI GPT provider configuration."""
 
-from typing import Optional
-
 from langchain_openai import ChatOpenAI
 
 # Available OpenAI models
@@ -30,7 +28,7 @@ def create_openai_llm(
     model: str = GPT_4_TURBO,
     temperature: float = 0.7,
     max_tokens: int = 4096,
-    api_key: Optional[str] = None,
+    api_key: str | None = None,
 ) -> ChatOpenAI:
     """
     Create an OpenAI LLM instance.

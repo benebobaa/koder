@@ -1,17 +1,15 @@
 """Context retrieval tool using hybrid search (lexical + embeddings) for enhanced code understanding."""
 
 from pathlib import Path
-from typing import Optional
 
-from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 
-from koder.tools.base import KoderTool, ReadOnlyTool
-from koder.tools.registry import registry
 from koder.config.settings import get_settings
 from koder.memory.embeddings import GoogleEmbeddings
 from koder.memory.retrieval import CodebaseRetriever, HybridRetriever
 from koder.memory.vector_store import VectorStore
+from koder.tools.base import ReadOnlyTool
+from koder.tools.registry import registry
 
 
 class ContextRetrievalInput(BaseModel):
@@ -23,7 +21,7 @@ class ContextRetrievalInput(BaseModel):
     max_results: int = Field(
         default=3, description="Maximum number of context results to retrieve"
     )
-    file_filter: Optional[str] = Field(
+    file_filter: str | None = Field(
         default=None, description="Optional file path filter (e.g., '*.py' or 'src/**')"
     )
 
@@ -59,7 +57,9 @@ class ContextRetrievalTool(ReadOnlyTool):
 
             # Check if embeddings are enabled and mode requires them
             if not settings.embeddings.enabled or settings.embeddings.mode == "off":
-                print("ℹ️  Context retrieval disabled (EMBEDDINGS_ENABLED=false or mode=off)")
+                print(
+                    "ℹ️  Context retrieval disabled (EMBEDDINGS_ENABLED=false or mode=off)"
+                )
                 self._initialized = True
                 return
 
@@ -85,31 +85,34 @@ class ContextRetrievalTool(ReadOnlyTool):
 
                     # Initialize retriever
                     self._codebase_retriever = CodebaseRetriever(
-                        vector_store=vector_store,
-                        workspace_path=self.workspace_path
+                        vector_store=vector_store, workspace_path=self.workspace_path
                     )
 
                 except Exception as e:
                     print(f"⚠️  Embedding initialization failed: {e}")
-                    print(f"   Falling back to lexical-only mode")
+                    print("   Falling back to lexical-only mode")
                     mode = "lexical"
 
             # Initialize hybrid retriever
             self._hybrid_retriever = HybridRetriever(
                 workspace_path=workspace_path,
                 codebase_retriever=self._codebase_retriever,
-                mode=mode
+                mode=mode,
             )
 
             # Auto-index workspace if needed
-            if mode == "lexical" or (mode == "reranker" and self._codebase_retriever is None):
+            if mode == "lexical" or (
+                mode == "reranker" and self._codebase_retriever is None
+            ):
                 # Lexical mode always needs indexing
                 self._auto_index_workspace_lexical()
             elif mode in ["primary", "reranker"] and self._codebase_retriever:
                 # Check if embedding data exists
                 try:
-                    test_results = self._codebase_retriever.vector_store.similarity_search(
-                        "test", k=1
+                    test_results = (
+                        self._codebase_retriever.vector_store.similarity_search(
+                            "test", k=1
+                        )
                     )
                     has_data = len(test_results) > 0
                 except Exception:
@@ -282,7 +285,7 @@ class ContextRetrievalTool(ReadOnlyTool):
                         if indexed_count % 50 == 0:
                             print(f"  Indexed {indexed_count} files...")
 
-                except Exception as e:
+                except Exception:
                     # Skip problematic files
                     continue
 
@@ -292,7 +295,7 @@ class ContextRetrievalTool(ReadOnlyTool):
                 )
 
                 # Log what was indexed
-                indexed_files = [str(f[0]) for f in files_to_index[:indexed_count]]
+                [str(f[0]) for f in files_to_index[:indexed_count]]
                 high_priority_count = sum(
                     1 for _, p in files_to_index[:indexed_count] if p >= 7
                 )
@@ -310,7 +313,7 @@ class ContextRetrievalTool(ReadOnlyTool):
             # Don't raise - allow tool to continue without context
 
     def _run(
-        self, query: str, max_results: int = 3, file_filter: Optional[str] = None
+        self, query: str, max_results: int = 3, file_filter: str | None = None
     ) -> str:
         """Execute the context retrieval using hybrid search."""
         self._ensure_initialized()
@@ -320,9 +323,7 @@ class ContextRetrievalTool(ReadOnlyTool):
 
         try:
             # Get relevant context using hybrid retriever
-            context = self._hybrid_retriever.get_relevant_context(
-                query, k=max_results
-            )
+            context = self._hybrid_retriever.get_relevant_context(query, k=max_results)
 
             # Apply file filtering if specified
             if file_filter and context != "No relevant context found.":
@@ -334,8 +335,10 @@ class ContextRetrievalTool(ReadOnlyTool):
                         lines = ["Filtered Context:", ""]
                         for i, doc in enumerate(filtered_docs, 1):
                             file_path = doc.metadata.get("file_path", "unknown")
-                            score = getattr(doc, 'score', 0.0)
-                            lines.append(f"[{i}] From {file_path} (score: {score:.2f}):")
+                            score = getattr(doc, "score", 0.0)
+                            lines.append(
+                                f"[{i}] From {file_path} (score: {score:.2f}):"
+                            )
                             lines.append(doc.page_content)
                             lines.append("")
                         context = "\n".join(lines)
@@ -349,7 +352,7 @@ class ContextRetrievalTool(ReadOnlyTool):
             return f"Error retrieving context: {str(e)}"
 
     async def _arun(
-        self, query: str, max_results: int = 3, file_filter: Optional[str] = None
+        self, query: str, max_results: int = 3, file_filter: str | None = None
     ) -> str:
         """Execute the context retrieval asynchronously."""
         # TODO: Implement true async retrieval

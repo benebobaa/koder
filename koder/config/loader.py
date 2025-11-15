@@ -2,12 +2,11 @@
 
 import os
 from pathlib import Path
-from typing import Optional
 
 from dotenv import load_dotenv
 
 
-def load_env_file(env_file: Optional[str] = None) -> bool:
+def load_env_file(env_file: str | None = None) -> bool:
     """
     Load environment variables from .env file.
 

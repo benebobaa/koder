@@ -2,7 +2,7 @@
 
 import time
 from collections import defaultdict
-from typing import Any, Optional
+from typing import Any
 
 
 class MetricsCollector:
@@ -90,7 +90,7 @@ class Timer:
         """
         self.metrics = metrics
         self.name = name
-        self.start_time: Optional[float] = None
+        self.start_time: float | None = None
 
     def __enter__(self):
         """Start timer."""
@@ -105,7 +105,7 @@ class Timer:
 
 
 # Global metrics instance
-_metrics: Optional[MetricsCollector] = None
+_metrics: MetricsCollector | None = None
 
 
 def get_metrics() -> MetricsCollector:

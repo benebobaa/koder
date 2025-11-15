@@ -1,7 +1,5 @@
 """LLM factory for multi-provider support."""
 
-from typing import Optional
-
 from langchain_anthropic import ChatAnthropic
 from langchain_core.language_models import BaseChatModel
 from langchain_core.runnables import ConfigurableField
@@ -120,7 +118,7 @@ class LLMFactory:
         model: str = "claude-sonnet-4-5-20250929",
         temperature: float = 0.7,
         max_tokens: int = 4096,
-        api_key: Optional[str] = None,
+        api_key: str | None = None,
     ) -> ChatAnthropic:
         """Create Anthropic LLM directly."""
         return ChatAnthropic(
@@ -135,7 +133,7 @@ class LLMFactory:
         model: str = "gpt-4-turbo-preview",
         temperature: float = 0.7,
         max_tokens: int = 4096,
-        api_key: Optional[str] = None,
+        api_key: str | None = None,
     ) -> ChatOpenAI:
         """Create OpenAI LLM directly."""
         return ChatOpenAI(
@@ -150,7 +148,7 @@ class LLMFactory:
         model: str = "deepseek-chat",
         temperature: float = 0.7,
         max_tokens: int = 4096,
-        api_key: Optional[str] = None,
+        api_key: str | None = None,
     ) -> ChatDeepSeek:
         """Create DeepSeek LLM directly."""
         return ChatDeepSeek(
@@ -165,7 +163,7 @@ class LLMFactory:
         model: str = "kimi-k2-turbo-preview",
         temperature: float = 0.7,
         max_tokens: int = 4096,
-        api_key: Optional[str] = None,
+        api_key: str | None = None,
     ) -> ChatOpenAI:
         """Create Moonshot LLM directly."""
         return create_moonshot_llm(
@@ -176,7 +174,7 @@ class LLMFactory:
         )
 
 
-def get_llm_config(provider: str, thread_id: Optional[str] = None) -> dict:
+def get_llm_config(provider: str, thread_id: str | None = None) -> dict:
     """
     Generate LLM runtime configuration.
 

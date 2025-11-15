@@ -1,13 +1,11 @@
 """Python script execution tool with isolation."""
 
 import os
-import signal
 import subprocess
 import sys
 import tempfile
 import threading
 from pathlib import Path
-from typing import Any, Optional
 
 from pydantic import Field
 
@@ -50,7 +48,7 @@ class PythonTool(KoderTool, WriteToolMixin):
         description="Working directory for execution (relative to workspace)",
     )
 
-    python_version: Optional[str] = Field(
+    python_version: str | None = Field(
         default=None,
         description="Python version to use (e.g., '3.9', '3.10'). None = system default",
     )
@@ -105,7 +103,7 @@ class PythonTool(KoderTool, WriteToolMixin):
 
         return sys.executable
 
-    def _create_temp_venv(self, base_dir: str) -> Optional[str]:
+    def _create_temp_venv(self, base_dir: str) -> str | None:
         """
         Create a temporary virtual environment.
 

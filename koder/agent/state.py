@@ -1,6 +1,7 @@
 """Agent state schema definitions."""
 
-from typing import Annotated, Any, Literal, Sequence, TypedDict
+from collections.abc import Sequence
+from typing import Annotated, Any, Literal, TypedDict
 
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
@@ -93,7 +94,8 @@ def create_initial_state(
         thread_id: Thread identifier for checkpointing
         user_id: User identifier
         max_iterations: Maximum number of reasoning iterations
-        execution_mode: Execution mode (auto=analyze complexity, quick=direct, plan=always plan)
+        execution_mode: Execution mode (auto=analyze complexity,
+            quick=direct, plan=always plan)
 
     Returns:
         Initial agent state with all required and optional planning fields

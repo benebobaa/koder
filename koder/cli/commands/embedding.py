@@ -3,19 +3,16 @@
 import os
 import time
 from pathlib import Path
-from typing import Optional
 
 import typer
-from rich.console import Console
 from rich.progress import (
+    BarColumn,
     Progress,
     SpinnerColumn,
-    TextColumn,
-    BarColumn,
     TaskProgressColumn,
+    TextColumn,
 )
 from rich.table import Table
-from rich.tree import Tree
 
 from koder.cli.ui.console import (
     console,
@@ -149,7 +146,6 @@ def quickstart(
             "spm-packages",
         }
 
-        total_files = 0
         total_indexed = 0
 
         print_info("Scanning files...")
@@ -197,7 +193,7 @@ def quickstart(
 
         final_count = retriever.vector_store.count()
 
-        print_success(f"✅ Quick setup completed!")
+        print_success("✅ Quick setup completed!")
         print_info(f"📁 Files indexed: {total_indexed}")
         print_info(f"📄 Total chunks: {final_count}")
         print_info(f"📂 Workspace: {workspace_path}")
@@ -410,7 +406,7 @@ def index(
     workspace: str = typer.Option(
         ".", "--workspace", "-w", help="Workspace directory to index"
     ),
-    pattern: Optional[str] = typer.Option(
+    pattern: str | None = typer.Option(
         None,
         "--pattern",
         "-p",
@@ -489,28 +485,6 @@ def index(
         workspace_path = Path(workspace).resolve()
 
         # Skip common non-source directories
-        skip_dirs = {
-            ".git",
-            ".vscode",
-            ".idea",
-            "__pycache__",
-            "node_modules",
-            ".venv",
-            "venv",
-            "env",
-            ".env",
-            "dist",
-            "build",
-            "target",
-            ".pytest_cache",
-            ".mypy_cache",
-            ".tox",
-            "coverage",
-            ".next",
-            ".nuxt",
-            "site-packages",
-            "spm-packages",
-        }
 
         print_info(f"Indexing workspace: {workspace_path}")
 
@@ -519,7 +493,7 @@ def index(
                 "Using incremental indexing (only changed files will be processed)"
             )
 
-        start_time = time.time()
+        time.time()
 
         with Progress(
             SpinnerColumn(),
@@ -567,7 +541,7 @@ def search(
     max_results: int = typer.Option(
         5, "--max-results", "-k", help="Maximum number of results"
     ),
-    file_filter: Optional[str] = typer.Option(
+    file_filter: str | None = typer.Option(
         None, "--file-filter", "-f", help="Filter results by file pattern"
     ),
     show_content: bool = typer.Option(
@@ -810,7 +784,7 @@ def metrics(
             "Searching",
             str(summary["performance"]["searching"]["total_searches"]),
             f"{summary['performance']['searching']['average_time']:.2f}s",
-            f"N/A",
+            "N/A",
         )
 
         console.print(perf_table)
@@ -905,7 +879,7 @@ def _get_health_status_display(status: str) -> str:
 
 @app.command()
 def mode(
-    mode: Optional[str] = typer.Argument(
+    mode: str | None = typer.Argument(
         None, help="Set retrieval mode: off, lexical, primary, reranker"
     ),
 ):
@@ -914,23 +888,37 @@ def mode(
 
     if mode is None:
         # Display current mode
-        console.print(f"\n[bold]Current Retrieval Mode:[/bold] [cyan]{settings.embeddings.mode}[/cyan]\n")
+        console.print(
+            f"\n[bold]Current Retrieval Mode:[/bold] [cyan]{settings.embeddings.mode}[/cyan]\n"
+        )
 
         console.print("[bold]Available Modes:[/bold]")
-        console.print("  • [cyan]off[/cyan]      - No retrieval (fastest, baseline for testing)")
-        console.print("  • [cyan]lexical[/cyan]  - Keyword search only (fast, free, good for exact matches)")
-        console.print("  • [cyan]primary[/cyan]  - Embeddings only (semantic search, higher cost)")
-        console.print("  • [cyan]reranker[/cyan] - Hybrid: lexical + embedding re-rank [green](recommended)[/green]\n")
+        console.print(
+            "  • [cyan]off[/cyan]      - No retrieval (fastest, baseline for testing)"
+        )
+        console.print(
+            "  • [cyan]lexical[/cyan]  - Keyword search only (fast, free, good for exact matches)"
+        )
+        console.print(
+            "  • [cyan]primary[/cyan]  - Embeddings only (semantic search, higher cost)"
+        )
+        console.print(
+            "  • [cyan]reranker[/cyan] - Hybrid: lexical + embedding re-rank [green](recommended)[/green]\n"
+        )
 
-        console.print(f"[bold]Settings:[/bold]")
+        console.print("[bold]Settings:[/bold]")
         console.print(f"  Enabled: {settings.embeddings.enabled}")
         console.print(f"  Monthly Budget: ${settings.embeddings.max_monthly_cost_usd}")
-        console.print(f"  Daily API Limit: {settings.embeddings.max_daily_api_calls} calls\n")
+        console.print(
+            f"  Daily API Limit: {settings.embeddings.max_daily_api_calls} calls\n"
+        )
     else:
         # Validate and set mode
         valid_modes = ["off", "lexical", "primary", "reranker"]
         if mode not in valid_modes:
-            print_error(f"Invalid mode '{mode}'. Must be one of: {', '.join(valid_modes)}")
+            print_error(
+                f"Invalid mode '{mode}'. Must be one of: {', '.join(valid_modes)}"
+            )
             raise typer.Exit(1)
 
         print_info(f"To change mode, set environment variable: EMBEDDINGS_MODE={mode}")
@@ -964,19 +952,21 @@ def cost():
         month_cost = stats["budget"]["month_cost_usd"]
         max_monthly = stats["budget"]["max_monthly_cost_usd"]
         monthly_pct = (month_cost / max(max_monthly, 0.01)) * 100
-        monthly_status = "✅" if monthly_pct < 80 else "⚠️" if monthly_pct < 100 else "❌"
+        monthly_status = (
+            "✅" if monthly_pct < 80 else "⚠️" if monthly_pct < 100 else "❌"
+        )
 
         budget_table.add_row(
             "Today's API Calls",
             str(today_calls),
             str(max_daily),
-            f"{daily_status} {daily_pct:.0f}%"
+            f"{daily_status} {daily_pct:.0f}%",
         )
         budget_table.add_row(
             "Month's Cost",
             f"${month_cost:.4f}",
             f"${max_monthly:.2f}",
-            f"{monthly_status} {monthly_pct:.0f}%"
+            f"{monthly_status} {monthly_pct:.0f}%",
         )
 
         console.print(budget_table)
@@ -1004,7 +994,9 @@ def cost():
             mode_table.add_column("Percentage", style="yellow")
 
             total_mode_calls = sum(stats["calls_by_mode"].values())
-            for mode, calls in sorted(stats["calls_by_mode"].items(), key=lambda x: x[1], reverse=True):
+            for mode, calls in sorted(
+                stats["calls_by_mode"].items(), key=lambda x: x[1], reverse=True
+            ):
                 pct = (calls / max(total_mode_calls, 1)) * 100
                 mode_table.add_row(mode or "unknown", str(calls), f"{pct:.1f}%")
 
@@ -1012,13 +1004,21 @@ def cost():
 
         # Warnings
         if daily_pct >= 80:
-            console.print(f"\n[yellow]⚠️  Warning: Daily API call limit at {daily_pct:.0f}%[/yellow]")
+            console.print(
+                f"\n[yellow]⚠️  Warning: Daily API call limit at {daily_pct:.0f}%[/yellow]"
+            )
         if monthly_pct >= 80:
-            console.print(f"\n[yellow]⚠️  Warning: Monthly cost budget at {monthly_pct:.0f}%[/yellow]")
+            console.print(
+                f"\n[yellow]⚠️  Warning: Monthly cost budget at {monthly_pct:.0f}%[/yellow]"
+            )
 
         if daily_pct >= 100 or monthly_pct >= 100:
-            console.print("\n[red]❌ Budget limit exceeded! API calls will be blocked.[/red]")
-            console.print("[dim]Adjust limits with EMBEDDINGS_MAX_DAILY_API_CALLS or EMBEDDINGS_MAX_MONTHLY_COST_USD[/dim]")
+            console.print(
+                "\n[red]❌ Budget limit exceeded! API calls will be blocked.[/red]"
+            )
+            console.print(
+                "[dim]Adjust limits with EMBEDDINGS_MAX_DAILY_API_CALLS or EMBEDDINGS_MAX_MONTHLY_COST_USD[/dim]"
+            )
 
     except Exception as e:
         print_error(f"Failed to get cost stats: {str(e)}")
@@ -1045,8 +1045,10 @@ def compare(
         console.print(report)
 
         # Show configuration
-        console.print(f"\n[bold]Configuration:[/bold]")
-        console.print(f"  A/B Testing: {'✅ Enabled' if ab_manager.enabled else '❌ Disabled'}")
+        console.print("\n[bold]Configuration:[/bold]")
+        console.print(
+            f"  A/B Testing: {'✅ Enabled' if ab_manager.enabled else '❌ Disabled'}"
+        )
         console.print(f"  Treatment Ratio: {ab_manager.ratio:.0%}")
         console.print(f"  Period: Last {days} days\n")
 

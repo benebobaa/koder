@@ -2,7 +2,6 @@
 
 import os
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional
 
 from pydantic import Field
 
@@ -17,7 +16,7 @@ class SearchBackend(ABC):
     @abstractmethod
     def search(
         self, query: str, max_results: int, safe_search: bool
-    ) -> List[Dict[str, str]]:
+    ) -> list[dict[str, str]]:
         """Execute search and return list of results.
 
         Each result should be a dict with keys: title, url, description
@@ -30,7 +29,7 @@ class DuckDuckGoBackend(SearchBackend):
 
     def search(
         self, query: str, max_results: int, safe_search: bool
-    ) -> List[Dict[str, str]]:
+    ) -> list[dict[str, str]]:
         """Execute DuckDuckGo search."""
         try:
             from ddgs import DDGS
@@ -68,7 +67,7 @@ class DuckDuckGoBackend(SearchBackend):
 class TavilyBackend(SearchBackend):
     """Tavily AI search backend (requires API key)."""
 
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self, api_key: str | None = None):
         """Initialize Tavily backend.
 
         Args:
@@ -83,7 +82,7 @@ class TavilyBackend(SearchBackend):
 
     def search(
         self, query: str, max_results: int, safe_search: bool
-    ) -> List[Dict[str, str]]:
+    ) -> list[dict[str, str]]:
         """Execute Tavily search."""
         try:
             from tavily import TavilyClient
@@ -133,7 +132,7 @@ class TavilyBackend(SearchBackend):
 class BraveBackend(SearchBackend):
     """Brave search backend (requires API key)."""
 
-    def __init__(self, api_key: Optional[str] = None):
+    def __init__(self, api_key: str | None = None):
         """Initialize Brave backend.
 
         Args:
@@ -148,7 +147,7 @@ class BraveBackend(SearchBackend):
 
     def search(
         self, query: str, max_results: int, safe_search: bool
-    ) -> List[Dict[str, str]]:
+    ) -> list[dict[str, str]]:
         """Execute Brave search."""
         try:
             import requests
@@ -207,13 +206,13 @@ class WebSearchTool(ReadOnlyTool):
         "Returns relevant web pages with titles, URLs, and descriptions."
     )
 
-    backend: Optional[str] = Field(
+    backend: str | None = Field(
         default=None, description="Search backend (auto-selected from settings if None)"
     )
-    max_results: Optional[int] = Field(
+    max_results: int | None = Field(
         default=None, description="Max results (uses settings default if None)"
     )
-    safe_search: Optional[bool] = Field(
+    safe_search: bool | None = Field(
         default=None, description="Safe search (uses settings default if None)"
     )
 
@@ -248,7 +247,7 @@ class WebSearchTool(ReadOnlyTool):
                 "Valid options: duckduckgo, tavily, brave"
             )
 
-    def _format_results(self, results: List[Dict[str, str]]) -> str:
+    def _format_results(self, results: list[dict[str, str]]) -> str:
         """Format search results into a readable string."""
         if not results:
             return "No results found."

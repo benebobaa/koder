@@ -43,7 +43,7 @@ def format_message(message: Any) -> None:
                     console.print(f"  {message.content}")
 
     elif isinstance(message, ToolMessage):
-        console.print(f"[tool]🔧 Tool Result:[/tool]")
+        console.print("[tool]🔧 Tool Result:[/tool]")
         console.print(f"  {message.content[:500]}")  # Truncate long outputs
         if len(message.content) > 500:
             console.print("  [dim]...(truncated)[/dim]")
@@ -117,7 +117,6 @@ def format_plan(plan: dict[str, Any]) -> None:
         plan: Plan dictionary with steps, analysis, files, etc.
     """
     from rich.panel import Panel
-    from rich.table import Table
 
     # Build plan display
     plan_text = f"## Analysis\n{plan.get('analysis', 'N/A')}\n\n"
@@ -230,7 +229,6 @@ def format_progress(current: int, total: int, message: str = "") -> None:
         total: Total steps
         message: Optional message to display
     """
-    from rich.progress import Progress, SpinnerColumn, TextColumn
 
     percentage = (current / total * 100) if total > 0 else 0
 
@@ -255,10 +253,12 @@ def format_approval_prompt(plan: dict[str, Any], task: str) -> None:
     format_plan(plan)
 
     # Then show approval prompt
+    files_to_modify = len(plan.get('files_to_modify', []))
+    files_to_create = len(plan.get('files_to_create', []))
     prompt_text = (
         f"[bold]Task:[/bold] {task}\n\n"
-        f"[yellow]⚠️  This plan will modify {len(plan.get('files_to_modify', []))} files "
-        f"and create {len(plan.get('files_to_create', []))} new files.[/yellow]\n\n"
+        f"[yellow]⚠️  This plan will modify {files_to_modify} files "
+        f"and create {files_to_create} new files.[/yellow]\n\n"
         f"[bold cyan]Approve this plan?[/bold cyan]"
     )
 

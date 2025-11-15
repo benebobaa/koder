@@ -1,7 +1,7 @@
 """Vector store for semantic search."""
 
 from pathlib import Path
-from typing import Any, Optional, List
+from typing import Any
 
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
@@ -16,7 +16,7 @@ class VectorStore:
     def __init__(
         self,
         persist_directory: str,
-        embeddings: Optional[Embeddings] = None,
+        embeddings: Embeddings | None = None,
         collection_name: str = "koder",
     ):
         """
@@ -44,7 +44,7 @@ class VectorStore:
     def add_documents(
         self,
         documents: list[Document],
-        ids: Optional[list[str]] = None,
+        ids: list[str] | None = None,
     ) -> list[str]:
         """
         Add documents to vector store.
@@ -61,8 +61,8 @@ class VectorStore:
     def add_texts(
         self,
         texts: list[str],
-        metadatas: Optional[list[dict]] = None,
-        ids: Optional[list[str]] = None,
+        metadatas: list[dict] | None = None,
+        ids: list[str] | None = None,
     ) -> list[str]:
         """
         Add texts to vector store.
@@ -81,7 +81,7 @@ class VectorStore:
         self,
         query: str,
         k: int = 4,
-        filter: Optional[dict[str, Any]] = None,
+        filter: dict[str, Any] | None = None,
     ) -> list[Document]:
         """
         Search for similar documents.
@@ -100,7 +100,7 @@ class VectorStore:
         self,
         query: str,
         k: int = 4,
-        filter: Optional[dict[str, Any]] = None,
+        filter: dict[str, Any] | None = None,
     ) -> list[tuple[Document, float]]:
         """
         Search for similar documents with relevance scores.
@@ -115,9 +115,7 @@ class VectorStore:
         """
         return self.vectorstore.similarity_search_with_score(query, k=k, filter=filter)
 
-    def delete(
-        self, ids: Optional[list[str]] = None, where: Optional[dict] = None
-    ) -> None:
+    def delete(self, ids: list[str] | None = None, where: dict | None = None) -> None:
         """
         Delete documents by ID or metadata filter.
 
@@ -178,7 +176,7 @@ class VectorStore:
 
 def create_vector_store(
     persist_directory: str,
-    embeddings: Optional[Embeddings] = None,
+    embeddings: Embeddings | None = None,
     collection_name: str = "koder",
 ) -> VectorStore:
     """

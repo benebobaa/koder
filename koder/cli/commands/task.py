@@ -1,7 +1,6 @@
 """Task command for one-off executions."""
 
 import uuid
-from typing import Optional
 
 import typer
 from langchain_core.messages import HumanMessage
@@ -35,7 +34,7 @@ def run(
         "-w",
         help="Workspace directory",
     ),
-    provider: Optional[str] = typer.Option(
+    provider: str | None = typer.Option(
         None,
         "--provider",
         "-p",

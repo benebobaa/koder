@@ -1,7 +1,5 @@
 """Tool registry for managing agent tools."""
 
-from typing import Optional
-
 from langchain_core.tools import BaseTool
 
 # Tool categorization constants for planning mode
@@ -91,7 +89,7 @@ class ToolRegistry:
 
         return decorator
 
-    def get_tool(self, name: str) -> Optional[BaseTool]:
+    def get_tool(self, name: str) -> BaseTool | None:
         """
         Get a tool instance by name.
 
@@ -114,8 +112,8 @@ class ToolRegistry:
 
     def get_tools(
         self,
-        categories: Optional[list[str]] = None,
-        names: Optional[list[str]] = None,
+        categories: list[str] | None = None,
+        names: list[str] | None = None,
     ) -> list[BaseTool]:
         """
         Get tool instances, optionally filtered by category or name.
@@ -157,7 +155,7 @@ class ToolRegistry:
         """
         return list(self._categories.keys())
 
-    def list_tools(self, category: Optional[str] = None) -> list[str]:
+    def list_tools(self, category: str | None = None) -> list[str]:
         """
         List registered tool names.
 

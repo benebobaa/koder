@@ -28,8 +28,8 @@ class ParsePythonTool(ReadOnlyTool):
         """Initialize with Python language support."""
         super().__init__(**kwargs)
         # Initialize parser with Python language (tree-sitter 0.20+ API)
-        PY_LANGUAGE = Language(tspython.language())
-        self.parser = Parser(PY_LANGUAGE)
+        py_language = Language(tspython.language())
+        self.parser = Parser(py_language)
 
     def _run(self, source: str) -> str:
         """

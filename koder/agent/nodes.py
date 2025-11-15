@@ -12,7 +12,6 @@ from koder.agent.state import AgentState
 from koder.config.settings import get_settings
 from koder.memory.ab_test import get_ab_test_manager
 
-
 # Simple context cache to minimize API calls
 _context_cache = {}
 _cache_ttl = 300  # 5 minutes
@@ -27,7 +26,8 @@ You help developers with:
 - Explaining technical concepts
 - Working with git repositories
 
-Use the available tools to complete tasks. Think step-by-step about what needs to be done.
+Use the available tools to complete tasks.
+Think step-by-step about what needs to be done.
 """
 
 
@@ -63,9 +63,10 @@ def reasoning_node(
                 content=f"""CONTEXT FROM CODEBASE:
 {context}
 
-Use this context to better understand the codebase and make more informed decisions.
-The context above provides relevant information about similar patterns, existing implementations,
-and code structure that should inform your approach to the task."""
+Use this context to better understand the codebase and make more informed
+decisions. The context above provides relevant information about similar
+patterns, existing implementations, and code structure that should inform
+your approach to the task."""
             )
             enhanced_messages.append(context_message)
 
@@ -179,7 +180,10 @@ def final_response_node(state: AgentState, llm: BaseChatModel) -> dict[str, Any]
     # Add instruction to provide final answer
     messages = state["messages"] + [
         HumanMessage(
-            content="Please provide your final response based on the information gathered."
+            content=(
+                "Please provide your final response based on the "
+                "information gathered."
+            )
         )
     ]
 
@@ -221,7 +225,7 @@ def _auto_gather_context(task: str, tools: list[BaseTool]) -> str:
         # A/B testing: Deterministically assign task to variant
         if settings.embeddings.ab_test_enabled:
             ab_manager = get_ab_test_manager()
-            task_id = hashlib.md5(task.encode()).hexdigest()
+            task_id = hashlib.md5(task.encode(), usedforsecurity=False).hexdigest()
             variant = ab_manager.get_variant(task_id)
 
             # Control group: no embeddings
@@ -229,7 +233,7 @@ def _auto_gather_context(task: str, tools: list[BaseTool]) -> str:
                 return ""
 
         # Create cache key from task
-        cache_key = hashlib.md5(task.encode()).hexdigest()
+        cache_key = hashlib.md5(task.encode(), usedforsecurity=False).hexdigest()
         current_time = time.time()
 
         # Check cache first (respecting configured TTL)
@@ -273,7 +277,10 @@ def _auto_gather_context(task: str, tools: list[BaseTool]) -> str:
         if file_count > 0:
             # Add mode indicator for transparency
             mode_indicator = settings.embeddings.mode
-            result = f"{context}\n\n*(Found {file_count} relevant files using {mode_indicator} search)*"
+            result = (
+                f"{context}\n\n*(Found {file_count} relevant files "
+                f"using {mode_indicator} search)*"
+            )
 
             # Cache the result
             _context_cache[cache_key] = {"context": result, "timestamp": current_time}
@@ -282,6 +289,6 @@ def _auto_gather_context(task: str, tools: list[BaseTool]) -> str:
         else:
             return ""
 
-    except Exception as e:
+    except Exception:
         # Silently fail - context is enhancement, not requirement
         return ""

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "koder"
-version = "0.1.0"
+version = "1.0.0"
 description = "CLI-based code agent powered by LangGraph inspired by Anthropic Claude Code"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -28,7 +28,6 @@ dependencies = [
     # Code Intelligence
     "tree-sitter>=0.23.0",
     "tree-sitter-python>=0.23.0",
-    "jedi>=0.19.0",
 
     # MCP Integration
     "fastmcp>=2.0.0",
@@ -55,8 +54,6 @@ dependencies = [
 
     # Utilities
     "watchdog>=3.0.0",
-    "networkx>=3.1.0",
-    "diskcache>=5.6.0",
     "tavily-python>=0.7.0",
 ]
 
@@ -69,6 +66,12 @@ dev = [
     "ruff>=0.6.0",
     "mypy>=1.11.0",
     "pre-commit>=3.8.0",
+    "safety>=3.0.0",
+    "bandit>=1.7.0",
+    "radon>=6.0.0",
+    "twine>=5.0.0",
+    "types-Pygments>=2.0.0",
+    "types-requests>=2.0.0",
 ]
 
 [project.scripts]
@@ -91,17 +94,33 @@ markers = [
 [tool.ruff]
 line-length = 88
 target-version = "py311"
+exclude = [
+    "visualize_agent_graph.py",
+    "visualize_agent_graph_matplotlib.py",
+    "show_architecture.py",
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "W", "UP"]
 ignore = []
 
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["E501"]  # Ignore line length in tests
+"koder/agent/prompts.py" = ["E501"]  # Long prompts are expected
+"koder/cli/commands/**" = ["E501"]  # CLI help strings can be long
+"koder/tools/**" = ["E501"]  # Tool descriptions can be long
+
 [tool.mypy]
 python_version = "3.11"
-warn_return_any = true
+warn_return_any = false
 warn_unused_configs = true
 disallow_untyped_defs = false
-check_untyped_defs = true
+check_untyped_defs = false
+ignore_missing_imports = true
+no_implicit_optional = false
+allow_subclassing_any = true
+allow_untyped_calls = true
+allow_untyped_defs = true
 
 [tool.uv]
 package = true

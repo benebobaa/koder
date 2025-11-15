@@ -1,13 +1,12 @@
 """Pytest configuration and fixtures."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock
 
+import pytest
 from langchain_core.messages import AIMessage
 from langgraph.checkpoint.sqlite import SqliteSaver
 
 from koder.config.settings import Settings
-from koder.llm.factory import LLMFactory
 
 
 @pytest.fixture(scope="session")

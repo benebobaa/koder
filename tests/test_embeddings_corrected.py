@@ -1,14 +1,15 @@
 """Corrected embedding search accuracy testing framework."""
 
 import json
-import time
 import statistics
+import time
+from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Any
-from dataclasses import dataclass, asdict
+from typing import Any
+
 from rich.console import Console
-from rich.table import Table
 from rich.panel import Panel
+from rich.table import Table
 
 from koder.config.loader import load_env_file
 from koder.memory.embeddings import GoogleEmbeddings
@@ -25,11 +26,11 @@ class TestResult:
 
     query: str
     actual_matches: int
-    relevance_scores: List[int]
+    relevance_scores: list[int]
     response_time_ms: float
     avg_relevance: float
     top_result_relevance: int
-    results: List[Dict[str, Any]]
+    results: list[dict[str, Any]]
 
 
 @dataclass
@@ -41,7 +42,7 @@ class TestSuite:
     avg_response_time: float
     avg_relevance: float
     top_relevance_avg: float
-    results: List[TestResult]
+    results: list[TestResult]
 
 
 class EmbeddingAccuracyTester:
@@ -91,7 +92,7 @@ class EmbeddingAccuracyTester:
             console.print(f"[red]❌ Setup failed: {str(e)}[/red]")
             return False
 
-    def calculate_relevance_score(self, query: str, result: Dict[str, Any]) -> int:
+    def calculate_relevance_score(self, query: str, result: dict[str, Any]) -> int:
         """
         Calculate relevance score for a search result (1-10 scale).
 
@@ -125,7 +126,7 @@ class EmbeddingAccuracyTester:
 
         return min(10, score)
 
-    def run_search_test(self, query: str, max_results: int = 5) -> Dict[str, Any]:
+    def run_search_test(self, query: str, max_results: int = 5) -> dict[str, Any]:
         """Run a single search test."""
         start_time = time.time()
 
@@ -322,7 +323,7 @@ class EmbeddingAccuracyTester:
 
         return self._create_test_suite("AI Integration Tests", results)
 
-    def test_performance_benchmarks(self) -> Dict[str, Any]:
+    def test_performance_benchmarks(self) -> dict[str, Any]:
         """Test performance benchmarks."""
         console.print("\n[bold]⚡ Testing Performance Benchmarks[/bold]")
 
@@ -361,7 +362,7 @@ class EmbeddingAccuracyTester:
         }
 
     def _create_test_suite(
-        self, test_name: str, results: List[TestResult]
+        self, test_name: str, results: list[TestResult]
     ) -> TestSuite:
         """Create a test suite from results."""
         if not results:
@@ -374,9 +375,7 @@ class EmbeddingAccuracyTester:
                 results=[],
             )
 
-        passed_tests = sum(
-            1 for r in results if r.avg_relevance >= 3
-        )  # Relevance >= 3/10
+        sum(1 for r in results if r.avg_relevance >= 3)  # Relevance >= 3/10
 
         return TestSuite(
             test_name=test_name,
@@ -389,7 +388,7 @@ class EmbeddingAccuracyTester:
             results=results,
         )
 
-    def run_all_tests(self) -> List[TestSuite]:
+    def run_all_tests(self) -> list[TestSuite]:
         """Run all comprehensive tests."""
         if not self.setup():
             console.print("[red]❌ Cannot run tests: No indexed data available[/red]")
@@ -406,8 +405,8 @@ class EmbeddingAccuracyTester:
         return test_suites
 
     def generate_report(
-        self, test_suites: List[TestSuite], performance_data: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, test_suites: list[TestSuite], performance_data: dict[str, Any]
+    ) -> dict[str, Any]:
         """Generate comprehensive test report."""
         console.print("\n[bold]📊 Generating Comprehensive Test Report[/bold]")
 
@@ -437,13 +436,6 @@ class EmbeddingAccuracyTester:
         quality_scores = []
         for suite in test_suites:
             quality_score = min(10, int(suite.avg_relevance * 2))  # Scale to 1-10
-            quality_color = (
-                "green"
-                if quality_score >= 8
-                else "yellow"
-                if quality_score >= 6
-                else "red"
-            )
             quality_scores.append(quality_score)
             results_table.add_row(
                 suite.test_name,
@@ -545,7 +537,7 @@ class EmbeddingAccuracyTester:
 
     def save_report(
         self,
-        report: Dict[str, Any],
+        report: dict[str, Any],
         filename: str = "embedding_accuracy_report_corrected.json",
     ):
         """Save the corrected test report."""

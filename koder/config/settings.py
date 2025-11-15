@@ -1,6 +1,6 @@
 """Configuration settings for Koder using Pydantic Settings."""
 
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -128,7 +128,7 @@ class StorageSettings(BaseSettings):
 class MCPSettings(BaseSettings):
     """MCP (Model Context Protocol) configuration."""
 
-    server_url: Optional[str] = None
+    server_url: str | None = None
     enabled: bool = False
 
     model_config = SettingsConfigDict(
@@ -183,7 +183,7 @@ class Settings(BaseSettings):
 
 
 # Singleton settings instance
-_settings: Optional[Settings] = None
+_settings: Settings | None = None
 
 
 def get_settings() -> Settings:

@@ -1,6 +1,6 @@
 """LLM configuration utilities."""
 
-from typing import Literal, Optional
+from typing import Literal
 
 from koder.llm.providers import anthropic, deepseek, moonshot, openai
 
@@ -21,7 +21,7 @@ def get_default_model(provider: ProviderType) -> str:
         raise ValueError(f"Unknown provider: {provider}")
 
 
-def get_model_info(provider: ProviderType, model: Optional[str] = None) -> dict:
+def get_model_info(provider: ProviderType, model: str | None = None) -> dict:
     """Get model information."""
     if model is None:
         model = get_default_model(provider)

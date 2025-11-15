@@ -1,7 +1,5 @@
 """DeepSeek provider configuration."""
 
-from typing import Optional
-
 from langchain_deepseek import ChatDeepSeek
 
 # Available DeepSeek models
@@ -24,7 +22,7 @@ def create_deepseek_llm(
     model: str = DEEPSEEK_CHAT,
     temperature: float = 0.7,
     max_tokens: int = 4096,
-    api_key: Optional[str] = None,
+    api_key: str | None = None,
 ) -> ChatDeepSeek:
     """
     Create a DeepSeek LLM instance.

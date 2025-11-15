@@ -5,11 +5,11 @@ using BM25 ranking and keyword matching. Ideal for exact matches like
 function names, error messages, and specific identifiers.
 """
 
-import re
-from pathlib import Path
-from typing import List, Dict, Optional, Tuple
-from collections import defaultdict, Counter
 import math
+import re
+from collections import Counter, defaultdict
+from pathlib import Path
+
 import structlog
 
 logger = structlog.get_logger(__name__)
@@ -19,10 +19,7 @@ class Document:
     """Simple document class for lexical retrieval."""
 
     def __init__(
-        self,
-        page_content: str,
-        metadata: Optional[Dict] = None,
-        score: float = 0.0
+        self, page_content: str, metadata: dict | None = None, score: float = 0.0
     ):
         self.page_content = page_content
         self.metadata = metadata or {}
@@ -47,13 +44,13 @@ class BM25Retriever:
     def __init__(self, k1: float = 1.5, b: float = 0.75):
         self.k1 = k1
         self.b = b
-        self.documents: List[Document] = []
-        self.doc_lengths: List[int] = []
+        self.documents: list[Document] = []
+        self.doc_lengths: list[int] = []
         self.avg_doc_length: float = 0.0
-        self.idf_scores: Dict[str, float] = {}
-        self.tokenized_docs: List[List[str]] = []
+        self.idf_scores: dict[str, float] = {}
+        self.tokenized_docs: list[list[str]] = []
 
-    def _tokenize(self, text: str) -> List[str]:
+    def _tokenize(self, text: str) -> list[str]:
         """
         Tokenize text for BM25 scoring.
 
@@ -68,20 +65,20 @@ class BM25Retriever:
             "sign-in timeout" -> ["sign", "in", "timeout"]
         """
         # Split CamelCase
-        text = re.sub(r'([a-z])([A-Z])', r'\1 \2', text)
+        text = re.sub(r"([a-z])([A-Z])", r"\1 \2", text)
 
         # Split on non-alphanumeric (but keep underscores temporarily)
-        tokens = re.findall(r'[a-zA-Z0-9_]+', text.lower())
+        tokens = re.findall(r"[a-zA-Z0-9_]+", text.lower())
 
         # Split on underscores
         expanded_tokens = []
         for token in tokens:
-            expanded_tokens.extend(token.split('_'))
+            expanded_tokens.extend(token.split("_"))
 
         # Filter out empty strings and very short tokens
         return [t for t in expanded_tokens if len(t) >= 2]
 
-    def index_documents(self, documents: List[Document]):
+    def index_documents(self, documents: list[Document]):
         """
         Index documents for BM25 retrieval.
 
@@ -111,7 +108,7 @@ class BM25Retriever:
             "bm25_indexed",
             num_documents=len(documents),
             avg_doc_length=self.avg_doc_length,
-            vocab_size=len(self.idf_scores)
+            vocab_size=len(self.idf_scores),
         )
 
     def _calculate_idf(self):
@@ -135,7 +132,7 @@ class BM25Retriever:
                 (num_docs - doc_freq + 0.5) / (doc_freq + 0.5) + 1
             )
 
-    def _score_document(self, query_tokens: List[str], doc_idx: int) -> float:
+    def _score_document(self, query_tokens: list[str], doc_idx: int) -> float:
         """
         Calculate BM25 score for a document given query tokens.
 
@@ -170,7 +167,7 @@ class BM25Retriever:
 
         return score
 
-    def search(self, query: str, k: int = 5) -> List[Document]:
+    def search(self, query: str, k: int = 5) -> list[Document]:
         """
         Search for documents matching the query using BM25.
 
@@ -197,7 +194,7 @@ class BM25Retriever:
                 doc_copy = Document(
                     page_content=doc.page_content,
                     metadata=doc.metadata.copy(),
-                    score=score
+                    score=score,
                 )
                 scored_docs.append(doc_copy)
 
@@ -209,7 +206,7 @@ class BM25Retriever:
             query=query,
             query_tokens=query_tokens,
             num_results=len(scored_docs),
-            top_k=k
+            top_k=k,
         )
 
         return scored_docs[:k]
@@ -239,15 +236,14 @@ class LexicalRetriever:
         self.indexed = False
 
     def index_files(
-        self,
-        file_patterns: List[str] = None,
-        max_files: int = 1000
+        self, file_patterns: list[str] = None, max_files: int = 1000
     ) -> int:
         """
         Index files from workspace for lexical search.
 
         Args:
-            file_patterns: Glob patterns for files to index (defaults to common code files)
+            file_patterns: Glob patterns for files to index
+                (defaults to common code files)
             max_files: Maximum number of files to index
 
         Returns:
@@ -277,10 +273,19 @@ class LexicalRetriever:
                     break
 
                 # Skip common non-source directories
-                if any(part in file_path.parts for part in [
-                    ".git", "__pycache__", "node_modules", ".venv",
-                    "venv", "build", "dist", ".pytest_cache"
-                ]):
+                if any(
+                    part in file_path.parts
+                    for part in [
+                        ".git",
+                        "__pycache__",
+                        "node_modules",
+                        ".venv",
+                        "venv",
+                        "build",
+                        "dist",
+                        ".pytest_cache",
+                    ]
+                ):
                     continue
 
                 try:
@@ -290,10 +295,12 @@ class LexicalRetriever:
                     doc = Document(
                         page_content=content,
                         metadata={
-                            "file_path": str(file_path.relative_to(self.workspace_path)),
+                            "file_path": str(
+                                file_path.relative_to(self.workspace_path)
+                            ),
                             "file_name": file_path.name,
                             "file_size": len(content),
-                        }
+                        },
                     )
 
                     documents.append(doc)
@@ -301,9 +308,7 @@ class LexicalRetriever:
 
                 except Exception as e:
                     logger.warning(
-                        "file_read_error",
-                        file_path=str(file_path),
-                        error=str(e)
+                        "file_read_error", file_path=str(file_path), error=str(e)
                     )
                     continue
 
@@ -314,17 +319,14 @@ class LexicalRetriever:
         logger.info(
             "lexical_indexing_complete",
             files_indexed=files_processed,
-            total_documents=len(documents)
+            total_documents=len(documents),
         )
 
         return files_processed
 
     def search(
-        self,
-        query: str,
-        k: int = 5,
-        file_filter: Optional[str] = None
-    ) -> List[Document]:
+        self, query: str, k: int = 5, file_filter: str | None = None
+    ) -> list[Document]:
         """
         Search for documents matching the query.
 
@@ -346,7 +348,8 @@ class LexicalRetriever:
         # Apply file filter if specified
         if file_filter:
             results = [
-                doc for doc in results
+                doc
+                for doc in results
                 if file_filter in doc.metadata.get("file_path", "")
             ]
             results = results[:k]
@@ -356,12 +359,12 @@ class LexicalRetriever:
             query=query,
             num_results=len(results),
             k=k,
-            file_filter=file_filter
+            file_filter=file_filter,
         )
 
         return results
 
-    def get_stats(self) -> Dict:
+    def get_stats(self) -> dict:
         """Get indexing statistics."""
         return {
             "indexed": self.indexed,

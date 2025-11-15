@@ -2,7 +2,6 @@
 
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Optional
 
 from langgraph.checkpoint.sqlite import SqliteSaver
 
@@ -30,7 +29,7 @@ def get_checkpointer(checkpoint_path: str):
 def get_checkpoint_config(
     thread_id: str,
     checkpoint_ns: str = "",
-    checkpoint_id: Optional[str] = None,
+    checkpoint_id: str | None = None,
     recursion_limit: int = 100,
 ) -> dict:
     """
@@ -98,7 +97,7 @@ class ThreadManager:
     def create_thread(
         self,
         thread_id: str,
-        title: Optional[str] = None,
+        title: str | None = None,
         user_id: str = "default",
     ) -> str:
         """
@@ -127,7 +126,7 @@ class ThreadManager:
 
         return thread_id
 
-    def list_threads(self, user_id: Optional[str] = None) -> list[dict]:
+    def list_threads(self, user_id: str | None = None) -> list[dict]:
         """
         List all threads, optionally filtered by user.
 
@@ -175,7 +174,7 @@ class ThreadManager:
             for row in rows
         ]
 
-    def get_thread(self, thread_id: str) -> Optional[dict]:
+    def get_thread(self, thread_id: str) -> dict | None:
         """
         Get thread metadata.
 

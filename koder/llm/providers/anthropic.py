@@ -1,7 +1,5 @@
 """Anthropic Claude provider configuration."""
 
-from typing import Optional
-
 from langchain_anthropic import ChatAnthropic
 
 # Available Claude models
@@ -27,7 +25,7 @@ def create_claude_llm(
     model: str = CLAUDE_SONNET,
     temperature: float = 0.7,
     max_tokens: int = 4096,
-    api_key: Optional[str] = None,
+    api_key: str | None = None,
 ) -> ChatAnthropic:
     """
     Create a Claude LLM instance.

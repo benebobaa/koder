@@ -1,16 +1,15 @@
 """LangSmith tracing configuration."""
 
 import os
-from typing import Optional
 
 from langsmith import Client
 
 
 def configure_tracing(
-    api_key: Optional[str] = None,
+    api_key: str | None = None,
     project: str = "koder",
     enabled: bool = True,
-) -> Optional[Client]:
+) -> Client | None:
     """
     Configure LangSmith tracing.
 

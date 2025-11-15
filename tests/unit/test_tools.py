@@ -1,7 +1,5 @@
 """Unit tests for tools."""
 
-import pytest
-
 from koder.tools.filesystem.read import ListDirectoryTool, ReadFileTool
 from koder.tools.registry import ToolRegistry, registry
 

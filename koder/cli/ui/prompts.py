@@ -74,7 +74,7 @@ def confirm(prompt: str = "Continue?") -> bool:
             # Try to read a single line from stdin
             line = sys.stdin.readline().strip().lower()
             return line in ["y", "yes", "true", "1"]
-        except:
+        except Exception:
             # If no input available, default to False (safer default)
             return False
 
@@ -90,7 +90,7 @@ def confirm(prompt: str = "Continue?") -> bool:
             # Simple text-based confirmation
             response = input(f"{prompt} (y/n): ").strip().lower()
             return response in ["y", "yes", "true", "1"]
-        except:
+        except Exception:
             return False
 
 
@@ -115,7 +115,7 @@ def ask(prompt: str, options: list[str] = None) -> str:
             if options and line not in options:
                 return options[0] if options else line  # Default to first option
             return line
-        except:
+        except Exception:
             # If no input available, default to first option or empty
             return options[0] if options else ""
 
@@ -152,5 +152,5 @@ def ask(prompt: str, options: list[str] = None) -> str:
                 return ask(prompt, options)  # Recursively ask again
 
             return response
-        except:
+        except Exception:
             return ""

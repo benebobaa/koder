@@ -3,7 +3,6 @@
 import hashlib
 import time
 from pathlib import Path
-from typing import Optional
 
 from langchain_core.documents import Document
 
@@ -112,7 +111,7 @@ class CodebaseRetriever:
         self,
         query: str,
         k: int = 4,
-        file_filter: Optional[str] = None,
+        file_filter: str | None = None,
     ) -> list[Document]:
         """
         Search for code snippets.
@@ -352,7 +351,7 @@ class CodebaseRetriever:
                         # Split at paragraph break
                         chunks.append("\n".join(current_chunk[: j + 1]))
                         current_chunk = current_chunk[j + 1 :]
-                        current_size = sum(len(l) + 1 for l in current_chunk)
+                        current_size = sum(len(line) + 1 for line in current_chunk)
                         break
                 else:
                     # No good break found, split anyway
@@ -600,7 +599,7 @@ class CodebaseRetriever:
     def smart_index_directory(
         self,
         directory_path: str = ".",
-        patterns: Optional[list[str]] = None,
+        patterns: list[str] | None = None,
         chunk_size: int = 1500,
         force: bool = False,
     ) -> dict[str, int]:
@@ -730,8 +729,8 @@ class HybridRetriever:
     def __init__(
         self,
         workspace_path: Path,
-        codebase_retriever: Optional[CodebaseRetriever] = None,
-        mode: Optional[str] = None
+        codebase_retriever: CodebaseRetriever | None = None,
+        mode: str | None = None,
     ):
         """
         Initialize hybrid retriever.
@@ -742,8 +741,8 @@ class HybridRetriever:
             mode: Retrieval mode (if None, uses settings)
         """
         from koder.config.settings import get_settings
-        from koder.memory.lexical import LexicalRetriever
         from koder.memory.cost_tracker import get_cost_tracker
+        from koder.memory.lexical import LexicalRetriever
 
         self.workspace_path = workspace_path
         self.settings = get_settings()
@@ -760,15 +759,15 @@ class HybridRetriever:
         logger.info(
             "hybrid_retriever_initialized",
             mode=self.mode,
-            workspace_path=str(workspace_path)
+            workspace_path=str(workspace_path),
         )
 
     def search(
         self,
         query: str,
         k: int = 5,
-        file_filter: Optional[str] = None,
-        force_mode: Optional[str] = None
+        file_filter: str | None = None,
+        force_mode: str | None = None,
     ) -> list[Document]:
         """
         Search for relevant documents using configured mode.
@@ -801,10 +800,7 @@ class HybridRetriever:
             return self._lexical_search(query, k, file_filter)
 
     def _lexical_search(
-        self,
-        query: str,
-        k: int,
-        file_filter: Optional[str]
+        self, query: str, k: int, file_filter: str | None
     ) -> list[Document]:
         """Perform lexical-only search."""
         if self.lexical_retriever is None:
@@ -820,19 +816,13 @@ class HybridRetriever:
         results = self.lexical_retriever.search(query, k=k, file_filter=file_filter)
 
         logger.info(
-            "lexical_search_complete",
-            query=query,
-            num_results=len(results),
-            k=k
+            "lexical_search_complete", query=query, num_results=len(results), k=k
         )
 
         return results
 
     def _embedding_search(
-        self,
-        query: str,
-        k: int,
-        file_filter: Optional[str]
+        self, query: str, k: int, file_filter: str | None
     ) -> list[Document]:
         """Perform embedding-only search."""
         if self.codebase_retriever is None:
@@ -859,19 +849,13 @@ class HybridRetriever:
         self.cost_tracker.record_query_call(mode="primary", num_queries=1)
 
         logger.info(
-            "embedding_search_complete",
-            query=query,
-            num_results=len(results),
-            k=k
+            "embedding_search_complete", query=query, num_results=len(results), k=k
         )
 
         return results
 
     def _hybrid_search(
-        self,
-        query: str,
-        k: int,
-        file_filter: Optional[str]
+        self, query: str, k: int, file_filter: str | None
     ) -> list[Document]:
         """
         Perform hybrid search: lexical first-pass then embedding re-rank.
@@ -885,7 +869,9 @@ class HybridRetriever:
         """
         # Step 1: Lexical first-pass (get more candidates)
         lexical_k = self.settings.embeddings.lexical_top_k
-        lexical_results = self._lexical_search(query, k=lexical_k, file_filter=file_filter)
+        lexical_results = self._lexical_search(
+            query, k=lexical_k, file_filter=file_filter
+        )
 
         if not lexical_results:
             logger.info("no_lexical_results", query=query)
@@ -894,11 +880,15 @@ class HybridRetriever:
         # Step 2: Decide if re-ranking is needed
         # If lexical results have very high scores, they're likely exact matches
         # and don't need embedding re-ranking
-        if len(lexical_results) > 0 and self._has_strong_lexical_signal(lexical_results):
+        if len(lexical_results) > 0 and self._has_strong_lexical_signal(
+            lexical_results
+        ):
             logger.info(
                 "skipping_rerank_strong_lexical_signal",
                 query=query,
-                top_score=lexical_results[0].score if hasattr(lexical_results[0], 'score') else None
+                top_score=lexical_results[0].score
+                if hasattr(lexical_results[0], "score")
+                else None,
             )
             return lexical_results[:k]
 
@@ -928,7 +918,7 @@ class HybridRetriever:
                 query=query,
                 lexical_candidates=len(lexical_results),
                 final_results=len(reranked),
-                k=k
+                k=k,
             )
 
             return reranked
@@ -957,25 +947,20 @@ class HybridRetriever:
 
         # Check if top result has very high score (likely exact match)
         top_result = results[0]
-        if hasattr(top_result, 'score') and top_result.score > 10.0:
+        if hasattr(top_result, "score") and top_result.score > 10.0:
             return True
 
         # Check if multiple results have good scores (clear signal)
         if len(results) >= 3:
             high_score_count = sum(
-                1 for r in results[:3]
-                if hasattr(r, 'score') and r.score > 5.0
+                1 for r in results[:3] if hasattr(r, "score") and r.score > 5.0
             )
             if high_score_count >= 2:
                 return True
 
         return False
 
-    def index_workspace(
-        self,
-        force: bool = False,
-        lexical_only: bool = False
-    ) -> dict:
+    def index_workspace(self, force: bool = False, lexical_only: bool = False) -> dict:
         """
         Index workspace for both lexical and embedding search.
 
@@ -986,30 +971,26 @@ class HybridRetriever:
         Returns:
             Dictionary with indexing statistics
         """
-        stats = {
-            "lexical": {},
-            "embeddings": {},
-            "mode": self.mode
-        }
+        stats = {"lexical": {}, "embeddings": {}, "mode": self.mode}
 
         # Index for lexical search
         if self.mode in ["lexical", "reranker"] or lexical_only:
             if self.lexical_retriever is None:
                 from koder.memory.lexical import LexicalRetriever
+
                 self.lexical_retriever = LexicalRetriever(self.workspace_path)
 
             num_files = self.lexical_retriever.index_files(max_files=1000)
             stats["lexical"] = {
                 "files_indexed": num_files,
-                **self.lexical_retriever.get_stats()
+                **self.lexical_retriever.get_stats(),
             }
 
         # Index for embedding search
         if not lexical_only and self.mode in ["primary", "reranker"]:
             if self.codebase_retriever:
                 embedding_stats = self.codebase_retriever.smart_index_directory(
-                    directory_path=".",
-                    force=force
+                    directory_path=".", force=force
                 )
                 stats["embeddings"] = embedding_stats
 
@@ -1040,7 +1021,7 @@ class HybridRetriever:
 
         for i, doc in enumerate(documents, 1):
             file_path = doc.metadata.get("file_path", "unknown")
-            score = getattr(doc, 'score', 0.0)
+            score = getattr(doc, "score", 0.0)
             lines.append(f"[{i}] From {file_path} (score: {score:.2f}):")
             lines.append(doc.page_content)
             lines.append("")

@@ -1,19 +1,20 @@
 """Comprehensive embedding search accuracy testing framework."""
 
 import json
-import time
-from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Any
-from dataclasses import dataclass, asdict
 import statistics
+import time
+from dataclasses import asdict, dataclass
+from pathlib import Path
+from typing import Any
+
 from rich.console import Console
-from rich.table import Table
 from rich.panel import Panel
+from rich.table import Table
 
 from koder.config.loader import load_env_file
 from koder.memory.embeddings import GoogleEmbeddings
-from koder.memory.vector_store import VectorStore
 from koder.memory.retrieval import CodebaseRetriever
+from koder.memory.vector_store import VectorStore
 from koder.tools.context import ContextRetrievalTool
 
 # Initialize rich console for beautiful output
@@ -27,13 +28,13 @@ class TestResult:
     query: str
     expected_matches: int
     actual_matches: int
-    relevance_scores: List[int]
+    relevance_scores: list[int]
     response_time_ms: float
     precision: float
     recall: float
     f1_score: float
     top_result_relevance: int
-    results: List[Dict[str, Any]]
+    results: list[dict[str, Any]]
 
 
 @dataclass
@@ -48,7 +49,7 @@ class TestSuite:
     avg_recall: float
     avg_f1_score: float
     top_relevance_avg: float
-    results: List[TestResult]
+    results: list[TestResult]
 
 
 class EmbeddingAccuracyTester:
@@ -106,7 +107,7 @@ class EmbeddingAccuracyTester:
             console.print(f"[red]❌ Setup failed: {str(e)}[/red]")
             return False
 
-    def calculate_relevance_score(self, query: str, result: Dict[str, Any]) -> int:
+    def calculate_relevance_score(self, query: str, result: dict[str, Any]) -> int:
         """
         Calculate relevance score for a search result (1-10 scale).
 
@@ -141,7 +142,7 @@ class EmbeddingAccuracyTester:
 
         return min(10, score)
 
-    def run_search_test(self, query: str, max_results: int = 5) -> Dict[str, Any]:
+    def run_search_test(self, query: str, max_results: int = 5) -> dict[str, Any]:
         """
         Run a single search test.
 
@@ -381,7 +382,7 @@ class EmbeddingAccuracyTester:
 
         return self._create_test_suite("ContextRetrievalTool Tests", results)
 
-    def test_embedding_generation(self) -> Dict[str, Any]:
+    def test_embedding_generation(self) -> dict[str, Any]:
         """Test embedding generation quality and performance."""
         console.print("\n[bold]🔍 Testing Embedding Generation[/bold]")
 
@@ -434,7 +435,7 @@ class EmbeddingAccuracyTester:
         }
 
     def _create_test_suite(
-        self, test_name: str, results: List[TestResult]
+        self, test_name: str, results: list[TestResult]
     ) -> TestSuite:
         """Create a test suite from results."""
         if not results:
@@ -466,7 +467,7 @@ class EmbeddingAccuracyTester:
             results=results,
         )
 
-    def run_all_tests(self) -> List[TestSuite]:
+    def run_all_tests(self) -> list[TestSuite]:
         """Run all tests and return results."""
         if not self.setup():
             console.print("[red]❌ Cannot run tests: No indexed data available[/red]")
@@ -482,7 +483,7 @@ class EmbeddingAccuracyTester:
 
         return test_suites
 
-    def generate_report(self, test_suites: List[TestSuite]) -> Dict[str, Any]:
+    def generate_report(self, test_suites: list[TestSuite]) -> dict[str, Any]:
         """Generate a comprehensive test report."""
         console.print("\n[bold]📊 Generating Test Report[/bold]")
 
@@ -548,7 +549,7 @@ class EmbeddingAccuracyTester:
         }
 
     def save_report(
-        self, report: Dict[str, Any], filename: str = "embedding_accuracy_report.json"
+        self, report: dict[str, Any], filename: str = "embedding_accuracy_report.json"
     ):
         """Save the test report to a file."""
         report_path = Path(filename)

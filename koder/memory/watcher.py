@@ -3,7 +3,6 @@
 import asyncio
 import time
 from pathlib import Path
-from typing import Optional, Set
 
 from koder.config.settings import get_settings
 from koder.memory.embeddings import GoogleEmbeddings
@@ -27,10 +26,10 @@ class FileWatcher:
         """
         self.workspace_path = Path(workspace_path).resolve()
         self.debounce_seconds = debounce_seconds
-        self._retriever: Optional[CodebaseRetriever] = None
+        self._retriever: CodebaseRetriever | None = None
         self._watching = False
         self._file_mtimes: dict[str, float] = {}
-        self._pending_changes: Set[str] = set()
+        self._pending_changes: set[str] = set()
         self._last_scan = 0.0
 
         # Supported file patterns
@@ -112,7 +111,7 @@ class FileWatcher:
             logger.error("file_watcher_init_failed", error=str(e))
             self._retriever = None
 
-    def _scan_files(self) -> Set[str]:
+    def _scan_files(self) -> set[str]:
         """Scan workspace for tracked files."""
         tracked_files = set()
 
@@ -139,7 +138,7 @@ class FileWatcher:
         except OSError:
             return 0.0
 
-    def _detect_changes(self) -> tuple[Set[str], Set[str]]:
+    def _detect_changes(self) -> tuple[set[str], set[str]]:
         """
         Detect file changes since last scan.
 
@@ -170,7 +169,7 @@ class FileWatcher:
 
         return changed_files, removed_files
 
-    def _process_changes(self, changed_files: Set[str], removed_files: Set[str]):
+    def _process_changes(self, changed_files: set[str], removed_files: set[str]):
         """Process detected file changes."""
         if not changed_files and not removed_files:
             return
@@ -269,7 +268,7 @@ class FileWatcher:
                 logger.error("watch_loop_error", error=str(e))
                 await asyncio.sleep(5)  # Wait longer on error
 
-    def force_reindex(self, file_paths: Optional[list[str]] = None):
+    def force_reindex(self, file_paths: list[str] | None = None):
         """Force re-indexing of specific files or all files."""
         self._ensure_initialized()
         if not self._retriever:
@@ -351,9 +350,7 @@ class FileWatcherManager:
         for watcher in self._watchers.values():
             watcher.stop_watching()
 
-    def force_reindex(
-        self, workspace_path: str, file_paths: Optional[list[str]] = None
-    ):
+    def force_reindex(self, workspace_path: str, file_paths: list[str] | None = None):
         """Force re-indexing for a workspace."""
         watcher = self.get_watcher(workspace_path)
         watcher.force_reindex(file_paths)

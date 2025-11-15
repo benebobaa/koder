@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Any
 
 from langchain_core.language_models import BaseChatModel
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
+from langchain_core.messages import AIMessage, SystemMessage, ToolMessage
 from langchain_core.tools import BaseTool
 
 from koder.agent.prompts import (
@@ -24,14 +24,15 @@ from koder.cli.ui.formatters import (
     format_todo_list,
 )
 from koder.cli.ui.prompts import confirm
-from koder.tools.registry import registry
 
 
 def complexity_analysis_node(
     state: AgentState, llm: BaseChatModel, tools: list[BaseTool]
 ) -> dict[str, Any]:
     """
-    Analyze task complexity to determine execution mode - now enhanced with discovery results.
+    Analyze task complexity to determine execution mode.
+
+    Now enhanced with discovery results.
 
     Args:
         state: Current agent state
@@ -91,7 +92,9 @@ def complexity_analysis_node(
         # Fallback to simple on parse error
         return {
             "task_complexity": "simple",
-            "complexity_reasoning": "Failed to parse analysis, defaulting to simple mode",
+            "complexity_reasoning": (
+                "Failed to parse analysis, defaulting to simple mode"
+            ),
         }
 
 
@@ -206,8 +209,8 @@ def plan_generation_node(
             content = response.content.strip()
 
             # Look for JSON pattern in the content
-            json_start = content.find('{')
-            json_end = content.rfind('}') + 1
+            json_start = content.find("{")
+            json_end = content.rfind("}") + 1
 
             if json_start != -1 and json_end > json_start:
                 json_str = content[json_start:json_end]
@@ -224,7 +227,10 @@ def plan_generation_node(
             print(f"⚠️  Could not fix plan: {fix_error}")
         # Fallback: create simple plan with proper structure
         fallback_plan = {
-            "analysis": f"Failed to generate structured plan for: {request}. Will execute directly.",
+            "analysis": (
+                f"Failed to generate structured plan for: {request}. "
+                "Will execute directly."
+            ),
             "steps": [
                 {
                     "step_number": 1,
@@ -272,7 +278,6 @@ def plan_approval_node(state: AgentState) -> dict[str, Any]:
         State updates with approval status
     """
     plan = state.get("plan")
-    task = state["current_task"]
 
     if not plan:
         return {"plan_status": "rejected", "error": "No plan to approve"}
@@ -399,8 +404,14 @@ def plan_execution_node(
                 state["messages"] = all_messages
 
                 from koder.cli.ui.console import console
-                console.print(f"\n⚠️  Step {step_number} is blocked: {summary}", style="yellow")
-                console.print("This step requires user intervention or external dependencies.", style="yellow")
+
+                console.print(
+                    f"\n⚠️  Step {step_number} is blocked: {summary}", style="yellow"
+                )
+                console.print(
+                    "This step requires user intervention or external dependencies.",
+                    style="yellow",
+                )
 
                 return {
                     "error": f"Step {step_number} blocked: {summary}",
@@ -440,7 +451,10 @@ def plan_execution_node(
             state["messages"] = all_messages
 
             from koder.cli.ui.console import console
-            console.print(f"\n❌ Step {step_number} failed with exception: {str(e)}", style="red")
+
+            console.print(
+                f"\n❌ Step {step_number} failed with exception: {str(e)}", style="red"
+            )
 
             # Decide whether to continue or stop based on error severity
             if "blocked" in str(e).lower() or "cannot proceed" in str(e).lower():
@@ -504,8 +518,9 @@ def _execute_step_with_llm(
     Returns:
         Dict with execution results, status, and messages
     """
-    from koder.cli.ui.console import console
     from rich.panel import Panel
+
+    from koder.cli.ui.console import console
 
     plan = state.get("plan", {})
     previous_results = [
@@ -521,9 +536,13 @@ def _execute_step_with_llm(
         step_number=step.get("step_number", step_index + 1),
         total_steps=len(plan.get("steps", [])),
         step_description=step_description,
-        plan_context=json.dumps(plan.get("analysis", ""), indent=2)[:500],  # Truncate to avoid token limits
+        plan_context=json.dumps(plan.get("analysis", ""), indent=2)[
+            :500
+        ],  # Truncate to avoid token limits
         current_step=json.dumps(step, indent=2),
-        previous_results=json.dumps(previous_results[-3:], indent=2) if previous_results else "None",  # Last 3 results
+        previous_results=json.dumps(previous_results[-3:], indent=2)
+        if previous_results
+        else "None",  # Last 3 results
         suggested_tool=suggested_tool,
     )
 
@@ -568,11 +587,13 @@ def _execute_step_with_llm(
                 try:
                     tool = tool_lookup[tool_name]
                     result = tool.invoke(tool_args)
-                    actions_taken.append({
-                        "tool": tool_name,
-                        "args": tool_args,
-                        "result": str(result)[:200]  # Truncate for summary
-                    })
+                    actions_taken.append(
+                        {
+                            "tool": tool_name,
+                            "args": tool_args,
+                            "result": str(result)[:200],  # Truncate for summary
+                        }
+                    )
                 except Exception as e:
                     result = f"Error executing tool: {str(e)}"
 
@@ -610,13 +631,17 @@ def _execute_step_with_llm(
     )
 
     # Extract final summary from LLM's last response
-    final_summary = response.content if hasattr(response, "content") else "Step executed"
+    final_summary = (
+        response.content if hasattr(response, "content") else "Step executed"
+    )
 
     return {
         "status": verification_status,
         "summary": final_summary,
         "actions_taken": actions_taken,
-        "messages": messages[len(state.get("messages", [])):],  # Return only new messages
+        "messages": messages[
+            len(state.get("messages", [])) :
+        ],  # Return only new messages
         "iterations": iteration,
     }
 
@@ -641,15 +666,23 @@ def _verify_step_completion(
     """
     if not actions_taken:
         # No actions taken - check if step was deemed unnecessary
-        if "not needed" in final_response.lower() or "already" in final_response.lower():
+        if (
+            "not needed" in final_response.lower()
+            or "already" in final_response.lower()
+        ):
             return "completed"
         return "failed"
 
     # Build actions summary
-    actions_summary = "\n".join([
-        f"- Used {action['tool']} with args {action['args']}: {action['result'][:100]}"
-        for action in actions_taken
-    ])
+    actions_summary = "\n".join(
+        [
+            (
+                f"- Used {action['tool']} with args {action['args']}: "
+                f"{action['result'][:100]}"
+            )
+            for action in actions_taken
+        ]
+    )
 
     # Ask LLM to verify completion
     verification_prompt = STEP_VERIFICATION_PROMPT.format(
@@ -691,21 +724,23 @@ def reflection_node(state: AgentState, llm: BaseChatModel) -> dict[str, Any]:
     request = state["current_task"]
     plan = state.get("plan", {})
     results = state.get("tool_outputs", [])
-    completed_steps = state.get("completed_steps", [])
-    failed_steps = state.get("failed_steps", [])
-    blocked_steps = state.get("blocked_steps", [])
+    state.get("completed_steps", [])
+    state.get("failed_steps", [])
+    state.get("blocked_steps", [])
 
     # Build comprehensive context for reflection
     total_steps = len(results)
     successful_steps = [r for r in results if r.get("status") == "completed"]
-    failed_step_results = [r for r in results if r.get("status") in ["failed", "partial", "blocked"]]
+    failed_step_results = [
+        r for r in results if r.get("status") in ["failed", "partial", "blocked"]
+    ]
 
     # Create detailed summary of what happened
     execution_summary = {
         "total_steps": total_steps,
         "completed": len(successful_steps),
         "failed": len(failed_step_results),
-        "steps_details": []
+        "steps_details": [],
     }
 
     for result in results:
@@ -713,7 +748,7 @@ def reflection_node(state: AgentState, llm: BaseChatModel) -> dict[str, Any]:
             "description": result.get("description", ""),
             "status": result.get("status", "unknown"),
             "summary": result.get("result", "")[:200],
-            "actions": len(result.get("actions_taken", []))
+            "actions": len(result.get("actions_taken", [])),
         }
         execution_summary["steps_details"].append(step_summary)
 
@@ -722,7 +757,7 @@ def reflection_node(state: AgentState, llm: BaseChatModel) -> dict[str, Any]:
         request=request,
         plan=json.dumps(plan.get("analysis", ""), indent=2)[:300],
         results=json.dumps(execution_summary, indent=2),
-        files_modified=", ".join(state.get("gathered_files", [])) or "None"
+        files_modified=", ".join(state.get("gathered_files", [])) or "None",
     )
 
     try:
@@ -742,7 +777,7 @@ def reflection_node(state: AgentState, llm: BaseChatModel) -> dict[str, Any]:
             "summary": reflection_content,
             "completed_steps": len(successful_steps),
             "failed_steps": len(failed_step_results),
-            "total_steps": total_steps
+            "total_steps": total_steps,
         },
         "should_continue": False,
         "messages": [ai_message],
@@ -750,19 +785,18 @@ def reflection_node(state: AgentState, llm: BaseChatModel) -> dict[str, Any]:
 
 
 def _create_fallback_reflection(
-    request: str,
-    successful_steps: list,
-    failed_steps: list,
-    total_steps: int
+    request: str, successful_steps: list, failed_steps: list, total_steps: int
 ) -> str:
     """Create a basic reflection when LLM reflection fails."""
     parts = []
-    parts.append(f"## Task Execution Summary\n")
+    parts.append("## Task Execution Summary\n")
     parts.append(f"**Original Request:** {request}\n")
 
     # Success summary
     if successful_steps:
-        parts.append(f"\n### ✅ Completed Steps ({len(successful_steps)}/{total_steps}):")
+        parts.append(
+            f"\n### ✅ Completed Steps ({len(successful_steps)}/{total_steps}):"
+        )
         for step in successful_steps[:5]:  # Show first 5
             desc = step.get("description", "Unknown step")
             parts.append(f"- {desc}")
