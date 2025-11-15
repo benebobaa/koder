@@ -412,12 +412,126 @@ uv run koder --provider deepseek info
 uv run python -c "from koder.config.settings import get_settings; print(get_settings().llm.provider)"
 ```
 
+## Advanced Usage
+
+### Intelligent Planning System
+
+Koder automatically analyzes task complexity and chooses the best execution mode:
+
+#### Simple Tasks → Direct Execution
+```bash
+$ koder chat
+You: What files are in the src/ directory?
+[Immediate response with directory listing]
+```
+
+#### Complex Tasks → Multi-Step Planning
+```bash
+$ koder task run "Add user authentication to the API"
+
+📋 Plan Mode: Multi-file implementation detected
+
+## Execution Plan
+**Analysis**: Implement user authentication with JWT tokens
+
+**Steps**:
+1. Create user model (src/models/user.py)
+2. Implement authentication endpoints (src/api/auth.py)
+3. Add JWT middleware (src/middleware/auth.py)
+4. Update main application (app.py)
+
+**Files Affected**: 3 to create, 1 to modify
+**Estimated Time**: 5 minutes
+**Complexity**: Medium
+
+Approve this plan? [Y/n] Y
+
+✅ Step 1: Creating user model... [completed]
+🔄 Step 2: Implementing auth endpoints... [in progress]
+⏳ Step 3: Adding JWT middleware... [pending]
+⏳ Step 4: Updating main application... [pending]
+```
+
+#### Planning Configuration
+```bash
+# Force planning mode for any task
+koder task run "simple task" --plan
+
+# Disable planning for complex tasks
+koder task run "complex task" --no-plan
+
+# Auto-approve plans without interaction
+koder task run "automated task" --auto-approve
+```
+
+### Thread Management
+
+Manage persistent conversations and switch between projects:
+
+#### Thread Operations
+```bash
+# List all threads
+koder chat list-threads
+
+# Resume a specific thread
+koder chat --thread chat-abc123
+
+# Start new thread with custom name
+koder chat --thread-name "project-refactor"
+
+# Delete a thread
+koder chat --delete-thread chat-abc123
+```
+
+#### Thread Context
+Each thread maintains:
+- Conversation history and context
+- Current workspace and working directory
+- Tool execution results
+- Active plans and TODO items
+- Checkpoints for rollback capability
+
+#### Workspace Switching
+```bash
+# Work in different project directories
+koder chat --workspace /path/to/project-a
+koder chat --workspace /path/to/project-b
+
+# Threads maintain their own workspace context
+```
+
+### Advanced Execution Modes
+
+#### Execution Mode Control
+```bash
+# Auto mode (default) - Analyzes complexity automatically
+koder chat --mode auto
+
+# Quick mode - Always execute directly (no planning)
+koder chat --mode quick
+
+# Plan mode - Always create plan first
+koder chat --mode plan
+```
+
+#### Provider Switching
+```bash
+# Use different LLM providers
+koder chat --provider anthropic   # Claude
+koder chat --provider openai      # GPT-4
+koder chat --provider deepseek    # DeepSeek
+koder chat --provider gemini      # Gemini
+
+# Switch providers mid-conversation
+koder chat --provider anthropic start
+# ... some conversation ...
+koder chat --provider deepseek continue
+```
+
 ## Next Steps
 
 - Read [Architecture](architecture.md) to understand the system design
 - Read [Configuration](configuration.md) for advanced settings
-- Read [Planning Guide](planning.md) to understand intelligent planning
-- Read [DeepSeek Provider](deepseek.md) for DeepSeek-specific configuration
 - Explore the codebase and try different tasks
 - Add custom tools for your specific needs
 

@@ -8,20 +8,139 @@ Koder uses environment variables for configuration. Copy `.env.example` to `.env
 
 ```bash
 # Choose your provider
-LLM_PROVIDER=anthropic  # or openai, deepseek
+LLM_PROVIDER=anthropic  # or openai, deepseek, gemini
 
 # API Keys
 ANTHROPIC_API_KEY=sk-ant-xxxxx
 OPENAI_API_KEY=sk-xxxxx
 DEEPSEEK_API_KEY=sk-xxxxx
+GEMINI_API_KEY=your-gemini-api-key-here
 
 # Model Configuration
 ANTHROPIC_MODEL=claude-sonnet-4-5-20250929
 OPENAI_MODEL=gpt-4-turbo-preview
 DEEPSEEK_MODEL=deepseek-chat
+GEMINI_MODEL=gemini-1.5-pro
 LLM_TEMPERATURE=0.7
 LLM_MAX_TOKENS=4096
 ```
+
+## Provider Configuration
+
+### Anthropic Claude
+
+**Available Models:**
+- `claude-opus-4-20250514` - Most capable, complex reasoning
+- `claude-sonnet-4-5-20250929` - Balanced performance (default)
+- `claude-haiku-4-20250917` - Fast, cost-effective
+
+**When to Use Claude:**
+- Complex architectural decisions
+- Code requiring deep reasoning
+- Large context window (200K tokens)
+- High-quality code generation
+
+**Configuration:**
+```bash
+LLM_PROVIDER=anthropic
+ANTHROPIC_API_KEY=sk-ant-xxxxx
+ANTHROPIC_MODEL=claude-sonnet-4-5-20250929
+```
+
+### OpenAI GPT
+
+**Available Models:**
+- `gpt-4-turbo-preview` - Latest GPT-4 capabilities (default)
+- `gpt-4o` - Optimized performance
+- `gpt-4` - Standard GPT-4
+- `gpt-3.5-turbo` - Fast, cost-effective
+
+**When to Use GPT:**
+- General-purpose assistance
+- Fast responses required
+- Cost-sensitive applications
+- Standard coding tasks
+
+**Configuration:**
+```bash
+LLM_PROVIDER=openai
+OPENAI_API_KEY=sk-xxxxx
+OPENAI_MODEL=gpt-4-turbo-preview
+```
+
+### DeepSeek
+
+**Available Models:**
+- `deepseek-chat` - General purpose, cost-effective (default)
+- `deepseek-reasoner` - Advanced reasoning capabilities
+
+**When to Use DeepSeek:**
+- Cost-effective code assistance
+- Fast response times needed
+- Complex reasoning with reasoner model
+- High-volume usage scenarios
+
+**Configuration:**
+```bash
+LLM_PROVIDER=deepseek
+DEEPSEEK_API_KEY=sk-your-deepseek-api-key-here
+DEEPSEEK_MODEL=deepseek-chat
+```
+
+**Advanced DeepSeek Settings:**
+```bash
+# Custom parameters
+DEEPSEEK_TEMPERATURE=0.7
+DEEPSEEK_MAX_TOKENS=4096
+DEEPSEEK_TOP_P=0.95
+DEEPSEEK_FREQUENCY_PENALTY=0.0
+DEEPSEEK_PRESENCE_PENALTY=0.0
+```
+
+### Google Gemini
+
+**Available Models:**
+- `gemini-1.5-pro` - Advanced reasoning, 2M token context (default)
+- `gemini-1.5-flash` - Fast responses, cost-effective
+- `gemini-pro-vision` - Multimodal (images + text)
+
+**When to Use Gemini:**
+- Massive context requirements (2M tokens)
+- Large-scale codebase analysis
+- Multimodal tasks (vision analysis)
+- Fast generation with flash model
+
+**Configuration:**
+```bash
+LLM_PROVIDER=gemini
+GOOGLE_API_KEY=your-gemini-api-key-here
+GEMINI_MODEL=gemini-1.5-pro
+```
+
+**Advanced Gemini Settings:**
+```bash
+# Custom parameters
+GEMINI_TEMPERATURE=0.7
+GEMINI_MAX_TOKENS=4096
+GEMINI_TOP_P=0.95
+GEMINI_TOP_K=40
+```
+
+### Provider Comparison
+
+| Provider | Best Model | Context | Speed | Cost | Strength |
+|----------|------------|---------|-------|------|----------|
+| Anthropic | Claude Sonnet | 200K | Fast | Medium | Balanced performance |
+| OpenAI | GPT-4 Turbo | 128K | Moderate | High | General purpose |
+| DeepSeek | DeepSeek Reasoner | 128K | Fast | Low | Cost-effective reasoning |
+| Gemini | Gemini 1.5 Pro | 2M | Moderate | High | Large context analysis |
+
+**Cost Optimization Tips:**
+- Use **DeepSeek Chat** for 80% of routine tasks
+- Use **Claude Sonnet** for balanced performance
+- Use **DeepSeek Reasoner** only for complex reasoning
+- Use **Gemini 1.5 Pro** for massive context analysis
+- Use **Gemini 1.5 Flash** for fast, cost-effective generation
 
 ### Embeddings Configuration
 
@@ -311,14 +430,95 @@ Application cache for performance:
 
 ### Setting Up MCP Servers
 
-Koder supports Model Context Protocol (MCP) for extended tool integration:
+Koder supports Model Context Protocol (MCP) for extended tool integration, allowing AI models to securely connect to external data sources and tools.
+
+#### Basic MCP Configuration
 
 ```bash
-# Configure MCP server in .env
+# MCP Server Configuration
 MCP_SERVER_URL=https://your-mcp-server.com
 MCP_API_KEY=your-mcp-api-key
 MCP_TIMEOUT=30
 MCP_ENABLED=true
+```
+
+#### Multiple MCP Servers
+
+```bash
+# Configure multiple MCP servers
+MCP_SERVERS=github,jira,database
+
+MCP_GITHUB_URL=https://github-mcp.example.com
+MCP_GITHUB_API_KEY=ghp_your_github_token
+
+MCP_JIRA_URL=https://jira-mcp.example.com
+MCP_JIRA_API_KEY=your_jira_api_token
+
+MCP_DATABASE_URL=https://database-mcp.example.com
+MCP_DATABASE_API_KEY=your_db_api_key
+```
+
+#### Authentication Methods
+
+```bash
+# API Key Authentication
+MCP_AUTH_TYPE=api_key
+MCP_API_KEY=your-secret-key
+
+# OAuth2 Authentication
+MCP_AUTH_TYPE=oauth2
+MCP_OAUTH_CLIENT_ID=your_client_id
+MCP_OAUTH_CLIENT_SECRET=your_client_secret
+MCP_OAUTH_TOKEN_URL=https://oauth.example.com/token
+
+# Certificate Authentication
+MCP_AUTH_TYPE=certificate
+MCP_CERT_PATH=/path/to/client.crt
+MCP_KEY_PATH=/path/to/client.key
+MCP_CA_PATH=/path/to/ca.crt
+```
+
+### What MCP Enables
+
+With MCP, Koder can access:
+- **External APIs** (GitHub, Jira, Slack, etc.)
+- **Databases** (PostgreSQL, MongoDB, Redis, etc.)
+- **Cloud Services** (AWS, Google Cloud, Azure)
+- **Development Tools** (Docker, Kubernetes, CI/CD)
+- **Monitoring Systems** (Prometheus, Grafana, DataDog)
+- **Custom Business Logic** (internal services, proprietary tools)
+
+### Real-World Use Cases
+
+```bash
+# Query GitHub issues directly
+koder> "Show me all open bugs assigned to me in the webapp repo"
+→ MCP Tool: github.list_issues(assignee="me", state="open", labels=["bug"])
+
+# Update Jira tickets
+koder> "Update ticket PROJ-123 status to In Progress and add comment"
+→ MCP Tool: jira.update_issue(key="PROJ-123", status="In Progress", comment="...")
+
+# Deploy to staging environment
+koder> "Deploy the current branch to staging environment"
+→ MCP Tool: kubernetes.deploy(image="myapp:latest", namespace="staging")
+
+# Monitor application performance
+koder> "Check the error rate for the past hour"
+→ MCP Tool: prometheus.query(query="rate(http_requests_total{status=~'5..'}[1h])")
+```
+
+### MCP Testing
+
+```bash
+# Test MCP connection
+koder --mcp-test info
+
+# List available MCP tools
+koder --mcp-list-tools info
+
+# Test specific MCP server
+koder --mcp-server github info
 ```
 
 ### MCP Tool Integration
@@ -327,6 +527,7 @@ MCP_ENABLED=true
 - Tools inherit permission levels from server configuration
 - Real-time tool availability updates
 - Support for custom tool schemas and parameters
+- Interactive approval follows same security model as built-in tools
 
 ## Security
 

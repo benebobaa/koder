@@ -92,6 +92,7 @@ $ koder task run "Add user authentication to the API"
 koder chat start --provider anthropic  # Claude
 koder chat start --provider openai     # GPT-4
 koder chat start --provider deepseek   # DeepSeek
+koder chat start --provider gemini     # Gemini
 ```
 
 ### Custom Workspace
@@ -105,6 +106,42 @@ koder task run "Analyze the codebase structure"
 koder task run "What changed in the last commit?"
 koder task run "Refactor this function to be more efficient"
 ```
+
+### Thread Management
+```bash
+koder chat list-threads                    # List all conversations
+koder chat --thread chat-abc123 start      # Resume specific thread
+koder chat --thread-name "project-x" start # Named conversation
+```
+
+### Execution Control
+```bash
+koder chat start --mode auto      # Automatic complexity detection (default)
+koder chat start --mode quick     # Always execute directly (no planning)
+koder chat start --mode plan      # Always create plan first
+```
+
+## 🔒 Security & Tool Permissions
+
+Koder protects your codebase with intelligent tool approval:
+
+**Auto-Approved (Safe) 🟢**
+- Read operations: File reading, directory listing
+- Code analysis: Function analysis, dependency finding
+- Git info: Status, logs, file properties
+- Search: Code search, pattern matching
+
+**Requires Approval (Medium Risk) 🟡**
+- File modifications: Creating, editing files
+- Git operations: Commits, pushes, branches
+- Build/deploy: Running tests, building projects
+
+**Explicit Confirmation (High Risk) 🔴**
+- File deletion: Removing files or directories
+- Destructive git: Reset, clean, branch deletion
+- System operations: Service management, config changes
+
+Interactive approval with clear risk descriptions for every operation.
 
 </details>
 
