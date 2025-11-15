@@ -55,6 +55,7 @@ dependencies = [
     # Utilities
     "watchdog>=3.0.0",
     "tavily-python>=0.7.0",
+    "urllib3>=2.5.0",  # Security: CVE-2025-50181, CVE-2025-50182
 ]
 
 [project.optional-dependencies]
