@@ -15,7 +15,7 @@
 curl -sSL https://koder.dev/install | bash
 
 # Start coding
-koder chat
+koder chat start
 ```
 
 <details>
@@ -23,22 +23,22 @@ koder chat
 
 ### Using pip
 ```bash
-pip install koder-cli
-koder chat
+pip install koder
+koder chat start
 ```
 
 ### Using uv (recommended for development)
 ```bash
-uv add koder-cli
-koder chat
+uv add koder
+koder chat start
 ```
 
 ### From source
 ```bash
 git clone https://github.com/bene/koder.git
 cd koder
-uv sync
-uv run koder chat
+uv sync --all-extras
+uv run koder chat start
 ```
 
 </details>
@@ -47,7 +47,7 @@ uv run koder chat
 
 ### Simple Questions → Instant Answers
 ```bash
-$ koder chat
+$ koder chat start
 You: What's in main.py?
 [File contents displayed immediately]
 ```
@@ -89,14 +89,14 @@ $ koder task run "Add user authentication to the API"
 
 ### Multiple LLM Providers
 ```bash
-koder chat --provider anthropic  # Claude
-koder chat --provider openai     # GPT-4
-koder chat --provider deepseek   # DeepSeek
+koder chat start --provider anthropic  # Claude
+koder chat start --provider openai     # GPT-4
+koder chat start --provider deepseek   # DeepSeek
 ```
 
 ### Custom Workspace
 ```bash
-koder chat --workspace /path/to/your/project
+koder chat start --workspace /path/to/your/project
 ```
 
 ### One-Off Tasks
