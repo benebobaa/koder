@@ -1,66 +1,19 @@
-name: Code Quality
+name: Code Quality - Scheduled Checks
 
 on:
-  push:
-    branches: [ trunk, main ]
   pull_request:
     branches: [ trunk, main ]
   schedule:
-    # Run daily at 2 AM UTC
-    - cron: '0 2 * * *'
+    # Run weekly on Monday at 2 AM UTC for dependency checks
+    - cron: '0 2 * * 1'
 
 jobs:
-  pre-commit:
-    name: Pre-commit Checks
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install UV
-        uses: astral-sh/setup-uv@v3
-        with:
-          enable-cache: true
-
-      - name: Set up Python
-        run: uv python install 3.13
-
-      - name: Install dependencies
-        run: uv sync --all-groups --dev
-
-      - name: Run pre-commit
-        run: uv run pre-commit run --all-files
-
-  license-check:
-    name: License Check
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install UV
-        uses: astral-sh/setup-uv@v3
-
-      - name: Set up Python
-        run: uv python install 3.13
-
-      - name: Install dependencies
-        run: uv pip install pip-licenses
-
-      - name: Check licenses
-        run: |
-          uv run pip-licenses --from=mixed --format=table
-          # Fail if there are any problematic licenses
-          if uv run pip-licenses --fail-on="unknown;GPL;AGPL" --from=mixed; then
-            echo "License check passed"
-          else
-            echo "License check failed - found problematic licenses"
-            exit 1
-          fi
-
   complexity-analysis:
     name: Code Complexity Analysis
     runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    timeout-minutes: 10
+    continue-on-error: true
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -108,6 +61,7 @@ jobs:
   dependency-review:
     name: Dependency Review
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     if: github.event_name == 'pull_request'
     steps:
       - name: Checkout code
@@ -121,6 +75,9 @@ jobs:
   stale-dependencies:
     name: Check for Stale Dependencies
     runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    timeout-minutes: 10
+    continue-on-error: true
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

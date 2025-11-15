@@ -14,6 +14,7 @@ jobs:
   quality:
     name: Code Quality
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -43,16 +44,15 @@ jobs:
   test:
     name: Test Python ${{ matrix.python-version }} on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ['3.11', '3.12', '3.13']
-        exclude:
-          # Exclude some combinations to reduce CI load while maintaining good coverage
-          - os: windows-latest
-            python-version: '3.11'
-          - os: windows-latest
+        python-version: ['3.11', '3.13']
+        include:
+          # Add Python 3.12 only on Ubuntu for complete version coverage
+          - os: ubuntu-latest
             python-version: '3.12'
 
     steps:
@@ -104,6 +104,7 @@ jobs:
   build:
     name: Build Package
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     needs: [quality, test]
     steps:
       - name: Checkout code
@@ -132,6 +133,7 @@ jobs:
   security:
     name: Security Scan
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -149,7 +151,7 @@ jobs:
         run: uv run safety check
 
       - name: Run bandit security linter
-        run: uv run bandit -r koder/ -f json -o bandit-report.json || true
+        run: uv run bandit -r koder/ -f json -o bandit-report.json
 
       - name: Upload bandit report
         uses: actions/upload-artifact@v4
@@ -159,10 +161,40 @@ jobs:
           path: bandit-report.json
           retention-days: 30
 
+  # License compliance check
+  license-check:
+    name: License Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install UV
+        uses: astral-sh/setup-uv@v3
+
+      - name: Set up Python
+        run: uv python install 3.13
+
+      - name: Install dependencies
+        run: uv pip install pip-licenses
+
+      - name: Check licenses
+        run: |
+          uv run pip-licenses --from=mixed --format=table
+          # Fail if there are any problematic licenses
+          if uv run pip-licenses --fail-on="unknown;GPL;AGPL" --from=mixed; then
+            echo "License check passed"
+          else
+            echo "License check failed - found problematic licenses"
+            exit 1
+          fi
+
   # End-to-end tests (run only on Ubuntu with latest Python)
   e2e:
     name: End-to-End Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     needs: [quality]
     if: github.event_name == 'pull_request' || github.ref == 'refs/heads/trunk'
     steps:
@@ -193,7 +225,8 @@ jobs:
   summary:
     name: CI Summary
     runs-on: ubuntu-latest
-    needs: [quality, test, build, security]
+    timeout-minutes: 5
+    needs: [quality, test, build, security, license-check]
     if: always()
     steps:
       - name: CI Summary
@@ -205,3 +238,4 @@ jobs:
           echo "| Tests | ${{ needs.test.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Build | ${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Security | ${{ needs.security.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| License Check | ${{ needs.license-check.result }} |" >> $GITHUB_STEP_SUMMARY
